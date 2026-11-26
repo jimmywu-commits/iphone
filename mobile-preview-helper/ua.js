@@ -6,20 +6,30 @@
   try { if (window.top === window) return; name = window.name || ''; } catch { return; }
   if (!name.startsWith('__mp_device__')) return;
 
-  /* ---------- iPhone identity ---------- */
-  const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
+  /* ---------- phone identity (iPhone Safari, or Android Chrome on a Galaxy) ---------- */
+  const android = name.includes(':android');
+  const UA = android
+    ? 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36'
+    : 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
   const N = Navigator.prototype;
   const def = (k, v) => { try { Object.defineProperty(N, k, { get: () => v, configurable: true }); } catch {} };
   def('userAgent', UA);
   def('appVersion', UA.replace(/^Mozilla\//, ''));
-  def('platform', 'iPhone');
-  def('vendor', 'Apple Computer, Inc.');
+  def('platform', android ? 'Linux armv81' : 'iPhone');
+  def('vendor', android ? 'Google Inc.' : 'Apple Computer, Inc.');
   def('maxTouchPoints', 5);
-  def('userAgentData', undefined);
+  if (android) {
+    const brands = [{ brand: 'Chromium', version: '142' }, { brand: 'Google Chrome', version: '142' }, { brand: 'Not_A Brand', version: '99' }];
+    def('userAgentData', {
+      brands, mobile: true, platform: 'Android',
+      getHighEntropyValues: async () => ({ brands, mobile: true, platform: 'Android', platformVersion: '16.0.0', model: 'SM-S948B', architecture: '', bitness: '' }),
+      toJSON: () => ({ brands, mobile: true, platform: 'Android' }),
+    });
+  } else def('userAgentData', undefined);
   try { if (!('ontouchstart' in window)) window.ontouchstart = null; } catch {}
 
   /* ---------- prefers-color-scheme emulation ---------- */
-  let scheme = name.endsWith(':dark') ? 'dark' : 'light';
+  let scheme = name.includes(':dark') ? 'dark' : 'light';
   const RE = /\(\s*prefers-color-scheme\s*:\s*(dark|light)\s*\)/gi;
   const rewrite = text => text.replace(RE, (m, v) => (v.toLowerCase() === scheme ? '(min-width: 0px)' : '(max-width: -1px)'));
   const orig = new WeakMap();   // rule/element -> original media text

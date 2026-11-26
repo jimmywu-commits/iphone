@@ -37,7 +37,7 @@
       if (e.source !== window || !e.data) return;
       if (e.data.type === 'mp:tool-ping') {
         try {
-          chrome.runtime.sendMessage({ type: 'mp:register' }, res => {
+          chrome.runtime.sendMessage({ type: 'mp:register', os: e.data.os === 'android' ? 'android' : 'ios' }, res => {
             void chrome.runtime.lastError;
             if (!res || !res.ok) return;
             window.postMessage({ type: 'mp:ext-ready', version: chrome.runtime.getManifest().version, sync: true }, '*');

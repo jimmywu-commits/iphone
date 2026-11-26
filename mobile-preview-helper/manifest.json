@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mobile Preview Helper",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Companion for the Mobile Preview tool (index.html): finger tracking inside the phone, iPhone user agent, dark mode, embedding of sites that refuse iframes, and Chrome-account sync of the tool's home screen and settings.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqM4i3v/0MTbQ3lA8vUPPVH1mGPSiIVcJGFFGuiP/urSGRawbfFIIkZU7wWJxScQD4C6R86nq/RV+HiW1Sbk+8z6Q06JZHk3sVZ2QdMR5TaAH0yptEiG/h+PK0HzxS2k7eFa5WJgKPK6DJHPOaX+fguA2r4dvdecmxOmA65MIiiPUv1WihygxttQECrORl0t+lnReyXJX5VDJwoBF0Z9LP7UHCc7jkp7P7K1qRwFzQOCE+vq8EDAyXUwe7iI8g+zWEgdTKC78baQTEiCxkyHK6o4kN6Vxwe4Z151YqqlLu+ggs6zJTQZUM+Pk94AJ/KImcLA50a/Ub2pul/9F6D4s+wIDAQAB",
   "permissions": ["declarativeNetRequestWithHostAccess", "storage"],
