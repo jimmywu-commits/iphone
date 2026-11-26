@@ -1,0 +1,1781 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobile Preview</title>
+<style>
+:root{
+  --bg:#08090c; --panel:rgba(26,27,32,.72); --panel-solid:#18191e; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --text:#f3f4f6; --muted:#8e919b; --hover:rgba(255,255,255,.07); --active:rgba(255,255,255,.13);
+  --ui:#0a84ff; --ui-soft:rgba(10,132,255,.16); --ui-text:#4da3ff; --danger:#ff453a; --ok:#30d158; --warn:#ffb340;
+  --shadow:0 24px 70px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3);
+  --dots:rgba(255,255,255,.045);
+  --f-base:#d9dadc; --f-hi:#f7f7f8; --f-lo:#9fa1a5;
+  color-scheme:dark;
+}
+[data-theme=light]{
+  --bg:#eceef2; --panel:rgba(255,255,255,.78); --panel-solid:#ffffff; --line:rgba(0,0,0,.08); --line2:rgba(0,0,0,.12);
+  --text:#15161a; --muted:#6c6f78; --hover:rgba(0,0,0,.05); --active:rgba(0,0,0,.08);
+  --ui-soft:rgba(10,132,255,.12); --ui-text:#0a6fe0;
+  --shadow:0 24px 60px rgba(20,24,40,.16), 0 2px 6px rgba(20,24,40,.08);
+  --dots:rgba(0,0,0,.05);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg); color:var(--text); overflow:hidden;
+  font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  display:grid; grid-template-rows:auto minmax(0,1fr) auto;
+  -webkit-font-smoothing:antialiased; transition:background .4s;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+kbd{font:11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;padding:3px 6px;border-radius:6px;background:var(--hover);border:1px solid var(--line);color:var(--muted)}
+
+/* ================= stage chrome ================= */
+.ambient{position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:
+    radial-gradient(42% 48% at 50% 48%, color-mix(in srgb,var(--f-base) 20%,transparent), transparent 72%),
+    radial-gradient(70% 60% at 50% 120%, color-mix(in srgb,var(--f-lo) 14%,transparent), transparent 70%),
+    radial-gradient(var(--dots) 1px, transparent 1.2px) 0 0/22px 22px;}
+.topbar{display:grid;grid-template-columns:1fr minmax(0,680px) 1fr;gap:16px;align-items:center;padding:14px 18px 6px;position:relative;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.2px;white-space:nowrap;min-width:0}
+.brand-mark{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#ff8a3d,#ee4d2d 45%,#7a5cff);box-shadow:0 4px 14px rgba(238,77,45,.35)}
+.brand-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2}
+.brand small{display:block;font-weight:500;color:var(--muted);font-size:11.5px;letter-spacing:0}
+.urlbar{position:relative;display:flex;align-items:center;gap:2px;padding:5px;border-radius:15px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(22px) saturate(1.4);box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
+.urlbar:focus-within{border-color:color-mix(in srgb,var(--ui) 55%,transparent);box-shadow:var(--shadow),0 0 0 4px var(--ui-soft)}
+.url-field{flex:1;display:flex;align-items:center;gap:8px;min-width:0;padding:0 8px 0 6px}
+.url-field .lock{color:var(--muted)}
+.url-field.secure .lock{color:var(--ok)}
+#urlInput{flex:1;min-width:0;height:34px;border:0;outline:0;background:transparent;color:var(--text);font-size:14px}
+#urlInput::placeholder{color:var(--muted)}
+.go{height:34px;padding:0 14px;border-radius:10px;background:var(--ui);color:#fff;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;transition:filter .15s,transform .1s}
+.go:hover{filter:brightness(1.1)} .go:active{transform:scale(.96)}
+.ibtn{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted);transition:background .15s,color .15s,transform .1s;flex:none;position:relative}
+.ibtn:hover:not(:disabled){background:var(--hover);color:var(--text)}
+.ibtn:active:not(:disabled){transform:scale(.92)}
+.ibtn:disabled{opacity:.3;cursor:default}
+.top-actions{display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.chip{height:32px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);white-space:nowrap;transition:color .15s,border-color .15s}
+.chip:hover{color:var(--text);border-color:var(--line2)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 22%,transparent)}
+.chip.ok .dot{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+.recents{position:absolute;left:0;right:0;top:calc(100% + 8px);padding:6px;border-radius:16px;background:var(--panel-solid);border:1px solid var(--line);box-shadow:var(--shadow);z-index:50;animation:drop .16s ease-out}
+@keyframes drop{from{opacity:0;transform:translateY(-4px)}}
+.recents-h{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.3px}
+.recents-h button{color:var(--muted);font-size:11.5px}
+.recents-h button:hover{color:var(--text)}
+.r-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;cursor:pointer}
+.r-item:hover,.r-item.sel{background:var(--hover)}
+.r-av{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff;flex:none}
+.r-txt{min-width:0;flex:1}
+.r-host{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-path{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-del{opacity:0;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:var(--muted)}
+.r-item:hover .r-del{opacity:1}
+.r-del:hover{background:var(--active);color:var(--text)}
+
+.viewport{position:relative;overflow:auto;display:flex;min-height:0}
+.stage-col{margin:auto;display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 24px}
+.scaler{position:relative;flex:none;transition:width .35s cubic-bezier(.2,.8,.2,1),height .35s cubic-bezier(.2,.8,.2,1)}
+.scaler.instant{transition:none}
+.shell{position:absolute;left:0;top:0;transform-origin:0 0;isolation:isolate}
+.dev-label{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;white-space:nowrap}
+.dev-label b{color:var(--text);font-weight:600}
+.dev-label i{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6}
+
+/* ================= device ================= */
+.device{position:absolute;border-radius:var(--or);
+  background:linear-gradient(135deg,var(--f-hi) 0%,var(--f-base) 18%,var(--f-lo) 48%,var(--f-base) 80%,var(--f-hi) 100%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.4),inset 0 0 4px 1px rgba(0,0,0,.25),0 50px 100px -30px rgba(0,0,0,.65),0 30px 50px -20px rgba(0,0,0,.4);
+  transition:background .5s}
+.bezel{position:absolute;border-radius:var(--br);background:#000;box-shadow:inset 0 0 0 1.5px #1d1d1f,0 0 0 .5px rgba(0,0,0,.6)}
+.screen{position:absolute;border-radius:var(--sr);overflow:hidden;isolation:isolate;background:#000;transform:translateZ(0);user-select:none}
+.sbtn{position:absolute;border-radius:2px;background:linear-gradient(90deg,var(--f-lo),var(--f-hi) 45%,var(--f-base));box-shadow:inset 0 0 1px rgba(0,0,0,.55);transition:background .5s}
+.sbtn.h{background:linear-gradient(180deg,var(--f-lo),var(--f-hi) 45%,var(--f-base))}
+.sbtn.flush{background:#2b2c30;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),inset 0 0 3px rgba(0,0,0,.8)}
+.island{position:absolute;background:#000;border-radius:999px;z-index:40;pointer-events:none}
+.island::after{content:"";position:absolute;width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#2a3b66 0,#0c1224 45%,#000 70%);box-shadow:0 0 0 1.5px #0b0b0d}
+.island.p::after{right:22px;top:50%;margin-top:-5.5px}
+.island.l::after{bottom:22px;left:50%;margin-left:-5.5px}
+.statusbar{position:absolute;left:0;right:0;top:11px;height:37px;z-index:30;display:grid;grid-template-columns:1fr 126px 1fr;align-items:center;color:#000;pointer-events:none;transition:color .3s}
+.screen.top-dark .statusbar{color:#fff}
+.sb-time{justify-self:center;font-weight:600;font-size:17px;letter-spacing:-.3px;padding-left:10px;font-feature-settings:"tnum"}
+.sb-icons{justify-self:center;display:flex;align-items:center;gap:6px;padding-right:4px}
+.sb-icons svg{display:block}
+.home-ind{position:absolute;left:50%;bottom:8px;width:140px;height:5px;margin-left:-70px;border-radius:3px;background:#000;z-index:35;pointer-events:none;transition:background .3s,width .2s}
+.screen.bottom-dark .home-ind{background:#fff}
+.screen.land .home-ind{width:200px;margin-left:-100px;bottom:6px}
+.home-zone{position:absolute;left:22%;right:22%;bottom:0;height:24px;z-index:36;cursor:pointer}
+.screen.on-home .home-zone{display:none}
+
+/* ================= home screen ================= */
+.home{position:absolute;inset:0;z-index:5;overflow:hidden;color:#fff;
+  background:
+    radial-gradient(90% 55% at 15% 8%,#ff9b5c 0%,transparent 55%),
+    radial-gradient(80% 60% at 95% 30%,#7d5cff 0%,transparent 58%),
+    radial-gradient(90% 60% at 30% 78%,#ee4d2d 0%,transparent 55%),
+    linear-gradient(180deg,#1b1340,#07091a)}
+.home::before{content:"";position:absolute;inset:-20%;background:radial-gradient(40% 30% at 70% 60%,rgba(255,255,255,.16),transparent 70%);filter:blur(20px);animation:drift 14s ease-in-out infinite alternate;pointer-events:none}
+@keyframes drift{to{transform:translate(-8%,-6%) scale(1.08)}}
+.hs-layer{position:absolute;inset:0;transform-origin:50% 50%}
+.hs-grid{position:absolute;left:0;right:0;top:64px;bottom:150px;padding:4px 20px 10px;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:86px;row-gap:14px;align-content:start;overflow-y:auto;scrollbar-width:none}
+.app{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;color:#fff;font-size:11.5px;font-weight:500;text-shadow:0 1px 3px rgba(0,0,0,.4);min-width:0}
+.app > span{max-width:74px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ic{width:62px;height:62px;border-radius:14px;position:relative;overflow:hidden;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:filter .12s}
+.ic svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff}
+.app:active .ic{filter:brightness(.68)}
+.widget{grid-column:span 4;grid-row:span 2;margin:0 4px 0;border-radius:24px;padding:16px 18px;display:grid;grid-template-columns:auto 1fr;gap:18px;color:#fff;text-shadow:none;
+  background:rgba(255,255,255,.16);backdrop-filter:blur(22px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 30px rgba(0,0,0,.15)}
+.wg-l{display:flex;flex-direction:column;justify-content:space-between;padding-right:16px;border-right:1px solid rgba(255,255,255,.18)}
+.wg-day{font-size:13px;font-weight:700;color:#ffb199;letter-spacing:.3px}
+.wg-date{font-size:54px;font-weight:300;line-height:1;letter-spacing:-2px}
+.wg-r{display:flex;flex-direction:column;gap:7px;font-size:12.5px;min-width:0}
+.wg-r b{font-size:13px;margin-bottom:2px}
+.wg-step{display:flex;gap:8px;align-items:center;opacity:.92}
+.wg-step i{font-style:normal;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:10.5px;font-weight:700;flex:none}
+.hs-search{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);height:30px;padding:0 14px;border-radius:15px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.2);backdrop-filter:blur(16px)}
+.hs-search svg{width:13px;height:13px;stroke-width:2.6}
+.hs-dock{position:absolute;left:12px;right:12px;bottom:12px;height:94px;border-radius:38px;display:grid;grid-template-columns:repeat(4,1fr);align-items:center;justify-items:center;
+  background:rgba(255,255,255,.2);backdrop-filter:blur(24px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.hs-dock .app > span{display:none}
+.hs-done{position:absolute;top:54px;right:16px;height:28px;padding:0 14px;border-radius:14px;background:rgba(255,255,255,.26);backdrop-filter:blur(10px);color:#fff;font-weight:650;font-size:13px;z-index:3}
+.jiggle .app .ic{animation:jig .26s ease-in-out infinite alternate}
+.jiggle .app:nth-child(2n) .ic{animation-delay:-.13s}
+@keyframes jig{from{transform:rotate(-2.2deg)}to{transform:rotate(2.2deg)}}
+.app .del{position:absolute;top:-7px;left:0;width:22px;height:22px;border-radius:50%;background:rgba(235,235,240,.95);color:#333;display:none;place-items:center;font:700 18px/1 -apple-system,sans-serif;font-style:normal;box-shadow:0 1px 4px rgba(0,0,0,.35);z-index:2;text-shadow:none}
+.jiggle .app.clip .del{display:grid}
+.app.pop .ic{animation:popic .6s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes popic{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.screen.land .hs-grid{grid-template-columns:repeat(6,1fr);top:18px;bottom:16px;left:64px;right:124px;grid-auto-rows:80px}
+.screen.land .widget{grid-column:span 2;grid-template-columns:1fr}
+.screen.land .wg-r{display:none}
+.screen.land .wg-l{border:0;padding:0}
+.screen.land .hs-dock{left:auto;right:12px;top:12px;bottom:12px;width:92px;height:auto;grid-template-columns:1fr;grid-template-rows:repeat(4,1fr)}
+.screen.land .hs-search{display:none}
+.screen.land .hs-done{top:14px;right:120px}
+
+/* ================= app view ================= */
+.appview{position:absolute;inset:0;z-index:10;background:var(--tint-top,#fff);transform-origin:50% 50%}
+.appview.off{visibility:hidden;pointer-events:none}
+.content{position:absolute;z-index:10;background:#fff;overflow:hidden}
+#frame{display:block;width:100%;height:100%;border:0;background:#fff}
+.loadbar{position:absolute;left:0;top:0;height:2.5px;width:100%;z-index:12;transform-origin:0 50%;transform:scaleX(0);background:var(--ui);opacity:0;pointer-events:none}
+.loadbar.run{opacity:1;animation:load 8s cubic-bezier(.1,.7,.2,1) forwards}
+.loadbar.done{opacity:0;transform:scaleX(1);transition:transform .2s,opacity .35s .2s}
+@keyframes load{0%{transform:scaleX(0)}10%{transform:scaleX(.35)}100%{transform:scaleX(.92)}}
+.safaribar{position:absolute;left:0;right:0;bottom:0;z-index:20;background:var(--tint-bottom,#fff);display:flex;justify-content:center;gap:8px;padding:6px 12px 0;transition:background .3s}
+.appview.is-fake .safaribar{display:none}
+.sf-btn,.sf-pill{height:44px;display:flex;align-items:center;justify-content:center;color:#111;background:rgba(255,255,255,.8);backdrop-filter:blur(16px) saturate(1.8);
+  box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 6px 18px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.95)}
+.sf-btn{width:44px;border-radius:50%;flex:none}
+.sf-btn svg{width:20px;height:20px;stroke-width:2.2}
+.sf-pill{flex:1;min-width:0;border-radius:22px;gap:6px;padding:0 6px 0 14px;font-size:15px;font-weight:500;cursor:text}
+.sf-pill .host{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-pill svg{width:16px;height:16px;opacity:.55}
+.sf-pill .sf-re{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.sf-pill .sf-re svg{opacity:.8}
+.screen.bottom-dark .sf-btn,.screen.bottom-dark .sf-pill{background:rgba(44,44,48,.82);color:#fff;box-shadow:0 0 0 .5px rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.1)}
+.screen.land .safaribar{padding:6px 80px 0}
+.screen.land .sf-pill{flex:0 1 460px;height:38px}
+.screen.land .sf-btn{width:38px;height:38px}
+.sfstart{position:absolute;inset:0;z-index:14;background:#f2f2f7;color:#111;padding:22px 18px;overflow:auto;scrollbar-width:none}
+.sfs-h{font-size:21px;font-weight:700;margin:4px 4px 14px;letter-spacing:-.3px}
+.sfs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 6px}
+.sfs-tile{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:#333;min-width:0}
+.sfs-tile .ic{width:58px;height:58px;border-radius:14px;box-shadow:0 0 0 .5px rgba(0,0,0,.08)}
+.sfs-tile span{max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sfs-note{margin:26px 4px 0;font-size:12.5px;color:#8e8e93;line-height:1.55}
+.fakeapp{position:absolute;inset:0;z-index:16;background:#f2f2f7;color:#111;padding:70px 18px 40px;overflow:hidden}
+.fa-title{font-size:34px;font-weight:700;letter-spacing:-.6px;margin:0 4px}
+.fa-card{margin-top:16px;background:#fff;border-radius:22px;padding:26px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.fa-card .ic{width:92px;height:92px;border-radius:21px;margin-bottom:8px}
+.fa-card b{font-size:19px}
+.fa-card span{color:#6e6e73;font-size:14px}
+.fa-card small{color:#8e8e93;font-size:12px;margin-top:6px}
+.fa-list{margin-top:16px;background:#fff;border-radius:16px;padding:4px 16px}
+.fa-row{display:flex;gap:12px;align-items:center;height:52px;border-bottom:.5px solid #e5e5ea}
+.fa-row:last-child{border-bottom:0}
+.fa-row i{width:30px;height:30px;border-radius:8px;flex:none}
+.fa-row div{height:10px;border-radius:5px;background:#e5e5ea}
+.splash{position:absolute;inset:0;z-index:55;pointer-events:none;display:none}
+.splash.on{display:block}
+.splash-ic{position:absolute;overflow:hidden}
+.splash-ic .ic{width:100%!important;height:100%!important;border-radius:0;box-shadow:none;animation:none!important}
+.splash-ic .del{display:none!important}
+.blocked{position:absolute;inset:0;z-index:15;background:#f5f5f7;color:#1d1d1f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px;text-align:center}
+.blocked .b-ic{width:64px;height:64px;border-radius:20px;background:#fff;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.08);margin-bottom:6px}
+.blocked .b-ic svg{width:30px;height:30px;stroke:#ff9f0a}
+.blocked h3{margin:0;font-size:18px}
+.blocked p{margin:0;color:#6e6e73;font-size:13.5px;line-height:1.55;word-break:break-all;white-space:pre-line}
+.blocked .b-acts{display:flex;gap:8px;margin-top:8px}
+.blocked button{height:38px;padding:0 16px;border-radius:12px;background:#0a84ff;color:#fff;font-weight:600;font-size:14px}
+.blocked button.sec{background:#e5e5ea;color:#1d1d1f}
+
+/* sheets & alerts (iOS) */
+.sheet-dim{position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.32);opacity:0;transition:opacity .3s}
+.sheet-dim.on{opacity:1}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:62;background:#f2f2f7;color:#111;border-radius:34px 34px 0 0;padding:8px 16px 34px;
+  transform:translateY(105%);transition:transform .44s cubic-bezier(.2,.9,.25,1);box-shadow:0 -10px 40px rgba(0,0,0,.18)}
+.sheet.on{transform:none}
+.grab{width:36px;height:5px;border-radius:3px;background:#c7c7cc;margin:0 auto 12px}
+.sh-head{display:flex;gap:12px;align-items:center;padding:2px 4px 12px}
+.sh-head .ic{width:46px;height:46px;border-radius:11px;box-shadow:0 0 0 .5px rgba(0,0,0,.1)}
+.sh-meta{min-width:0;flex:1}
+.sh-t{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-u{color:#8e8e93;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-x{width:30px;height:30px;border-radius:50%;background:#e3e3e8;color:#6d6d72;display:grid;place-items:center;flex:none}
+.sh-x svg{width:14px;height:14px;stroke-width:2.6}
+.sh-group{background:#fff;border-radius:14px;overflow:hidden;margin-top:10px}
+.sh-item{display:flex;justify-content:space-between;align-items:center;width:100%;height:50px;padding:0 16px;font-size:16px;color:#111;border-bottom:.5px solid #e5e5ea;text-align:left}
+.sh-item:last-child{border-bottom:0}
+.sh-item:active{background:#e5e5ea}
+.sh-item svg{width:22px;height:22px;stroke:#111;stroke-width:1.7}
+.sh-item.hl{color:#0a84ff;font-weight:500}
+.sh-item.hl svg{stroke:#0a84ff}
+.sheet.tall{top:56px;padding-top:0}
+.a2-nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:56px;margin:0 2px}
+.a2-nav b{font-size:16.5px}
+.a2-nav button{font-size:16.5px;color:#0a84ff;justify-self:start}
+.a2-nav button.add{justify-self:end;font-weight:650}
+.a2-card{background:#fff;border-radius:14px;padding:14px;display:flex;gap:14px;align-items:center;margin-top:6px}
+.a2-card .ic{width:62px;height:62px;border-radius:14px;box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.a2-fields{flex:1;min-width:0}
+.a2-name{width:100%;border:0;border-bottom:.5px solid #d1d1d6;font-size:16.5px;padding:6px 0 9px;outline:none;color:#111;background:transparent;user-select:text}
+.a2-url{color:#8e8e93;font-size:13px;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.a2-row{background:#fff;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;height:50px;margin-top:22px;font-size:16px}
+.ios-sw{width:51px;height:31px;border-radius:16px;background:#34c759;position:relative;flex:none;transition:background .2s}
+.ios-sw::after{content:"";position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:right .2s}
+.ios-sw.off{background:#e9e9ea}
+.ios-sw.off::after{right:22px}
+.a2-note{color:#8e8e93;font-size:12.5px;margin:8px 16px;line-height:1.5}
+.alert-wrap{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:rgba(0,0,0,.28);animation:fadein .2s}
+.alert{width:270px;border-radius:16px;background:rgba(242,242,247,.94);backdrop-filter:blur(20px);text-align:center;color:#111;overflow:hidden;animation:alertin .3s cubic-bezier(.2,.9,.3,1.2)}
+.alert h4{margin:20px 16px 4px;font-size:17px}
+.alert p{margin:0 16px 18px;font-size:13px;line-height:1.45}
+.alert-btns{display:grid;grid-template-columns:1fr 1fr;border-top:.5px solid rgba(60,60,67,.3)}
+.alert-btns button{height:44px;font-size:17px;color:#0a84ff}
+.alert-btns button + button{border-left:.5px solid rgba(60,60,67,.3)}
+.alert-btns .destr{color:#ff3b30;font-weight:600}
+@keyframes fadein{from{opacity:0}}
+@keyframes alertin{from{transform:scale(1.15);opacity:0}}
+.hint{position:absolute;left:14px;right:14px;z-index:45;padding:12px 14px;border-radius:18px;background:rgba(20,20,24,.9);color:#fff;backdrop-filter:blur(16px);font-size:13px;line-height:1.45;display:flex;gap:10px;align-items:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:hintin .45s cubic-bezier(.2,.9,.3,1.2)}
+.hint b{color:#ffd29a}
+.hint button{margin-left:auto;flex:none;height:28px;padding:0 10px;border-radius:9px;background:rgba(255,255,255,.16);color:#fff;font-size:12.5px;font-weight:600}
+@keyframes hintin{from{transform:translateY(16px);opacity:0}}
+
+/* ================= iOS dark appearance ================= */
+.ios-dark .home::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.28);pointer-events:none;z-index:0}
+.ios-dark .hs-layer{z-index:1}
+.ios-dark .content,.ios-dark #frame{background:#000}
+.ios-dark .sf-btn,.ios-dark .sf-pill{background:rgba(44,44,48,.82);color:#fff;box-shadow:0 0 0 .5px rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.1)}
+.ios-dark .sfstart{background:#000;color:#fff}
+.ios-dark .sfs-tile{color:#d1d1d6}
+.ios-dark .fakeapp{background:#000;color:#fff}
+.ios-dark .fa-card,.ios-dark .fa-list{background:#1c1c1e}
+.ios-dark .fa-card span{color:#98989f}
+.ios-dark .fa-row{border-color:#38383a}
+.ios-dark .fa-row div{background:#2c2c2e}
+.ios-dark .blocked{background:#000;color:#fff}
+.ios-dark .blocked .b-ic{background:#1c1c1e}
+.ios-dark .blocked button.sec{background:#2c2c2e;color:#fff}
+.ios-dark .sheet{background:#1c1c1e;color:#fff;box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+.ios-dark .grab{background:#48484a}
+.ios-dark .sh-x{background:#2c2c2e;color:#98989f}
+.ios-dark .sh-group,.ios-dark .a2-card,.ios-dark .a2-row{background:#2c2c2e}
+.ios-dark .sh-item{color:#fff;border-color:#38383a}
+.ios-dark .sh-item svg{stroke:#fff}
+.ios-dark .sh-item.hl{color:#0a84ff}.ios-dark .sh-item.hl svg{stroke:#0a84ff}
+.ios-dark .sh-item:active{background:#3a3a3c}
+.ios-dark .a2-name{color:#fff;border-color:#48484a}
+.ios-dark .ios-sw.off{background:#39393d}
+.ios-dark .alert{background:rgba(44,44,46,.94);color:#fff}
+.ios-dark .alert-btns,.ios-dark .alert-btns button + button{border-color:rgba(84,84,88,.6)}
+
+/* ================= touch visuals ================= */
+.touch-layer{position:absolute;inset:0;z-index:90;pointer-events:none;overflow:hidden;--accent:#fff;--accent-rgb:255,255,255}
+.capture{position:absolute;inset:0;z-index:89;display:none}
+.screen.present .capture{display:block}
+.screen.finger-on,.screen.finger-on *{cursor:none!important}
+#trail{position:absolute;left:0;top:0;width:100%;height:100%}
+.finger{position:absolute;left:0;top:0;opacity:0;transition:opacity .16s;will-change:transform;--rot:-18deg}
+.finger.show{opacity:1}
+.finger.left{--rot:18deg}
+.f-svg{position:absolute;left:-40px;top:-40px;width:80px;height:200px;overflow:visible;transform-origin:40px 40px;transform:rotate(var(--rot));transition:transform .14s cubic-bezier(.2,.8,.3,1)}
+.finger.down .f-svg{transform:rotate(var(--rot)) scale(.92)}
+.f-shadow{fill:none;stroke:rgba(0,0,0,.38);stroke-width:3.6}
+.f-body{fill:rgba(255,255,255,.16);stroke:rgba(255,255,255,.95);stroke-width:1.6;transition:fill .12s}
+.finger.down .f-body{fill:rgba(255,255,255,.3)}
+.f-nail{fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.6);stroke-width:1.2}
+.f-line{fill:none;stroke:rgba(255,255,255,.5);stroke-width:1.2;stroke-linecap:round}
+.f-ring{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.75;transition:opacity .14s}
+.f-ring-s{fill:none;stroke:rgba(0,0,0,.35);stroke-width:3;transition:opacity .14s}
+.f-dot{fill:var(--accent);stroke:rgba(0,0,0,.45);stroke-width:1}
+.f-contact{fill:var(--accent);opacity:0;transform:scale(.4);transform-box:fill-box;transform-origin:center;transition:opacity .12s,transform .16s cubic-bezier(.2,.8,.3,1.4)}
+.finger.down .f-contact{opacity:.38;transform:scale(1)}
+.finger.down .f-ring,.finger.down .f-ring-s{opacity:0}
+.f-circle{display:none;position:absolute;left:-19px;top:-19px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.26);border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 1px rgba(0,0,0,.28),0 6px 16px rgba(0,0,0,.25);transition:transform .12s,background .12s}
+.finger.dot .f-circle{display:block}
+.finger.dot .f-svg{display:none}
+.finger.dot.down .f-circle{transform:scale(.8);background:rgba(var(--accent-rgb),.55)}
+.ripple{position:absolute;left:0;top:0}
+.ripple::before{content:"";position:absolute;left:-14px;top:-14px;width:28px;height:28px;border-radius:50%;border:2.5px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.18),inset 0 0 0 1px rgba(0,0,0,.12);animation:rip .62s cubic-bezier(.2,.7,.3,1) forwards}
+.ripple::after{content:"";position:absolute;left:-20px;top:-20px;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(var(--accent-rgb),.6),rgba(var(--accent-rgb),0) 70%);animation:flash .38s ease-out forwards}
+@keyframes rip{from{transform:scale(.45);opacity:1}to{transform:scale(2.7);opacity:0}}
+@keyframes flash{from{transform:scale(.5);opacity:1}to{transform:scale(1.25);opacity:0}}
+.lp{position:absolute;left:0;top:0;transition:opacity .2s}
+.lp svg{position:absolute;left:-30px;top:-30px;width:60px;height:60px;overflow:visible;transform:rotate(-90deg)}
+.lp-track{fill:none;stroke:rgba(0,0,0,.25);stroke-width:4}
+.lp-bar{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:151;stroke-dashoffset:151;animation:lpfill .45s linear forwards}
+.lp.done svg{animation:lpdone .35s cubic-bezier(.2,.8,.3,1.4) forwards}
+.lp.out{opacity:0}
+@keyframes lpfill{to{stroke-dashoffset:0}}
+@keyframes lpdone{50%{transform:rotate(-90deg) scale(1.25)}to{transform:rotate(-90deg) scale(1.1);opacity:0}}
+
+/* ================= dock (tool) ================= */
+.dock-wrap{display:flex;justify-content:center;padding:4px 16px 18px;position:relative;z-index:20}
+.dock{display:flex;align-items:center;gap:4px;padding:6px;border-radius:20px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(22px) saturate(1.4);box-shadow:var(--shadow);max-width:100%;flex-wrap:wrap;justify-content:center}
+.sep{width:1px;height:24px;background:var(--line2);margin:0 4px}
+.dbtn{height:40px;min-width:40px;padding:0 11px;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:550;color:var(--text);transition:background .15s,color .15s,transform .1s;position:relative;white-space:nowrap}
+.dbtn:hover{background:var(--hover)}
+.dbtn:active{transform:scale(.95)}
+.dbtn:disabled{opacity:.35;cursor:default}
+.dbtn .chev{width:14px;height:14px;opacity:.6}
+.dbtn.rec{color:var(--danger)}
+.dbtn.rec.live{background:color-mix(in srgb,var(--danger) 16%,transparent)}
+.dbtn.rec.live svg circle:last-child{animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}
+.split{display:flex;border-radius:13px}
+.split .dbtn:first-child{border-radius:13px 4px 4px 13px;padding-right:8px}
+.split .dbtn:last-child{border-radius:4px 13px 13px 4px;padding:0 6px;min-width:26px}
+.split.on .dbtn{background:var(--ui-soft);color:var(--ui-text)}
+.seg{display:flex;padding:3px;border-radius:12px;background:var(--hover);gap:2px;position:relative}
+.seg button{height:34px;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:550;color:var(--muted);transition:background .15s,color .15s;white-space:nowrap}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--panel-solid);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 .5px var(--line2)}
+.seg.sm button{height:28px;padding:0 10px;font-size:12px}
+.zoom{display:flex;align-items:center}
+.zoom .dbtn{min-width:32px;padding:0 6px}
+.zoom-val{min-width:80px;font-variant-numeric:tabular-nums;font-size:12.5px}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translate(-50%,4px);padding:6px 9px;border-radius:8px;background:#000;color:#fff;font-size:11.5px;font-weight:500;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:80}
+.topbar [data-tip]::after{bottom:auto;top:calc(100% + 10px)}
+[data-tip]:hover::after{opacity:1;transform:translate(-50%,0);transition-delay:.35s}
+.pop-open [data-tip]::after{display:none}
+.dock-item{position:relative}
+.pop{position:absolute;bottom:calc(100% + 14px);left:50%;width:330px;padding:14px;border-radius:20px;background:var(--panel-solid);border:1px solid var(--line);box-shadow:var(--shadow);
+  opacity:0;visibility:hidden;transform:translate(-50%,8px) scale(.98);transform-origin:50% 100%;transition:opacity .16s,transform .18s cubic-bezier(.2,.8,.3,1),visibility .18s;z-index:70;max-height:70vh;overflow:auto}
+.pop.open{opacity:1;visibility:visible;transform:translate(-50%,0) scale(1)}
+.pop-title{font-size:11.5px;font-weight:650;color:var(--muted);letter-spacing:.4px;margin:2px 4px 8px}
+.pop-title:not(:first-child){margin-top:14px}
+.dev-item{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;width:100%;padding:8px 10px;border-radius:12px;text-align:left}
+.dev-item:hover{background:var(--hover)}
+.dev-item.on{background:var(--ui-soft)}
+.dev-glyph{justify-self:center;border:2px solid currentColor;border-radius:6px;opacity:.75;position:relative}
+.dev-glyph::after{content:"";position:absolute;top:2px;left:50%;width:6px;height:2px;margin-left:-3px;border-radius:2px;background:currentColor}
+.dev-name{font-weight:600}
+.dev-meta{font-size:12px;color:var(--muted)}
+.dev-item .check{color:var(--ui-text);opacity:0}
+.dev-item.on .check{opacity:1}
+.swatches{display:flex;flex-wrap:wrap;gap:10px;padding:2px 4px}
+.sw-c{width:26px;height:26px;border-radius:50%;position:relative;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2),inset 0 2px 3px rgba(255,255,255,.35);transition:transform .12s}
+.sw-c::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;transition:border-color .15s}
+.sw-c.on::after{border-color:var(--ui)}
+.sw-c:hover{transform:scale(1.08)}
+.swatches.sm{gap:8px}.swatches.sm .sw-c{width:22px;height:22px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 4px;min-height:40px}
+.row > span:first-child{font-weight:550}
+.row small{display:block;font-weight:400;color:var(--muted);font-size:11.5px;margin-top:1px}
+.toggle{cursor:pointer;border-radius:10px;padding:7px 8px;margin:0 -4px}
+.toggle:hover{background:var(--hover)}
+.sw{width:40px;height:24px;border-radius:12px;background:var(--active);position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s cubic-bezier(.3,.7,.4,1.3)}
+.toggle.on .sw{background:var(--ok)}
+.toggle.on .sw::after{transform:translateX(16px)}
+.toggle.dis{opacity:.45}
+.divider{height:1px;background:var(--line);margin:8px 0}
+.pop-sub{font-size:11.5px;color:var(--muted);margin:4px 4px 2px;display:flex;align-items:center;gap:6px}
+.pop-sub .dot{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.pop-sub.ok .dot{background:var(--ok)}
+.sync-line{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);margin:0 4px 10px;line-height:1.5}
+.sync-line .dot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:none;margin-top:5px}
+.sync-line.ok .dot{background:var(--ok)}
+.pbtns{display:flex;gap:8px}
+.pbtn{flex:1;height:36px;border-radius:11px;background:var(--hover);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:550;transition:background .15s}
+.pbtn:hover{background:var(--active)}
+.pbtn svg{width:16px;height:16px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);padding:10px 16px;border-radius:14px;background:rgba(18,18,22,.92);color:#fff;font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.3,1.2);z-index:100;max-width:90vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.recpill{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:999px;background:rgba(20,20,24,.92);color:#fff;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.recpill .rdot{width:9px;height:9px;border-radius:50%;background:var(--danger);animation:blink 1s steps(2) infinite}
+.recpill button{height:28px;padding:0 12px;border-radius:999px;background:var(--danger);color:#fff;font-size:12.5px;font-weight:700}
+dialog{border:0;padding:0;border-radius:22px;width:min(660px,92vw);max-height:86vh;background:var(--panel-solid);color:var(--text);box-shadow:var(--shadow);border:1px solid var(--line)}
+dialog::backdrop{background:rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+dialog[open]{animation:dlg .22s cubic-bezier(.2,.8,.3,1)}
+@keyframes dlg{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.dlg-h{display:flex;align-items:center;gap:12px;padding:18px 20px 0}
+.dlg-h h2{margin:0;font-size:18px;flex:1}
+.dlg-tabs{padding:14px 20px 0}
+.dlg-b{padding:16px 22px 22px;overflow:auto;max-height:calc(86vh - 120px)}
+.keys{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
+.keys div{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line)}
+.steps{margin:0;padding-left:20px;line-height:1.75}
+.steps li{margin-bottom:4px}
+.dlg-b code{font:12.5px ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--hover);padding:2px 6px;border-radius:6px}
+.unlock{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.unlock div{padding:12px;border-radius:14px;background:var(--hover);font-size:13px}
+.unlock b{display:block;margin-bottom:2px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.6}
+@media (max-width:1180px){.lbl{display:none}}
+@media (max-width:980px){.topbar{grid-template-columns:auto minmax(0,1fr) auto}.brand-name{display:none}}
+@media (max-width:640px){
+  .dev-name-btn{display:none}.seg button{padding:0 8px}
+  .topbar{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 10px 4px}
+  .brand,#extChip,#urlKbd,#btnReload{display:none}
+  .go{padding:0 10px;font-size:0;gap:0}.go svg{width:16px!important;height:16px!important}
+}
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+
+<!-- ================= TOP BAR ================= -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.5 5.3h3"/></svg></div>
+    <div class="brand-name">Mobile Preview<small>手機實機體驗模擬</small></div>
+  </div>
+  <form class="urlbar" id="urlForm" autocomplete="off">
+    <button type="button" class="ibtn" id="btnBack" data-tip="上一頁 (Alt+←)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button type="button" class="ibtn" id="btnReload" data-tip="重新整理"><svg class="i" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 4v5h-5"/></svg></button>
+    <div class="url-field" id="urlField">
+      <svg class="i lock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+      <input id="urlInput" type="text" placeholder="輸入網址，例如 shopee.tw（會用手機裡的 Safari 開啟）" spellcheck="false" autocapitalize="off">
+      <kbd id="urlKbd">Ctrl L</kbd>
+    </div>
+    <button type="submit" class="go">前往<svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    <div class="recents" id="recents" hidden></div>
+  </form>
+  <div class="top-actions">
+    <button class="chip" id="extChip"><span class="dot"></span><span id="extText">偵測擴充中…</span></button>
+    <button class="ibtn" id="btnTheme" data-tip="切換深淺色 (T)"><svg class="i" viewBox="0 0 24 24" id="themeIcon"></svg></button>
+    <button class="ibtn" id="btnHelp" data-tip="說明與快捷鍵 (?)"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17.2v.1"/></svg></button>
+  </div>
+</header>
+
+<!-- ================= STAGE ================= -->
+<main class="viewport" id="viewport">
+  <div class="stage-col">
+    <div class="scaler instant" id="scaler">
+      <div class="shell" id="shell">
+        <div id="buttons"></div>
+        <div class="device" id="device">
+          <div class="bezel" id="bezel">
+            <div class="screen" id="screen">
+              <div class="island" id="island"></div>
+              <div class="statusbar" id="statusbar">
+                <div class="sb-time" id="sbTime">9:41</div><div></div>
+                <div class="sb-icons">
+                  <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg>
+                  <svg width="17" height="12" viewBox="0 0 18 13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M1.6 4.9a10.4 10.4 0 0 1 14.8 0"/><path d="M4.3 7.7a6.6 6.6 0 0 1 9.4 0"/><path d="M7 10.4a2.8 2.8 0 0 1 4 0"/></svg>
+                  <svg width="27" height="13" viewBox="0 0 28 13"><rect x=".5" y=".5" width="24" height="12" rx="3.8" fill="none" stroke="currentColor" opacity=".4"/><rect x="2.5" y="2.5" width="17" height="8" rx="2.2" fill="currentColor"/><path d="M26 4.6v3.8a2 2 0 0 0 0-3.8z" fill="currentColor" opacity=".45"/></svg>
+                </div>
+              </div>
+
+              <!-- HOME SCREEN -->
+              <div class="home" id="home">
+                <div class="hs-layer" id="hsLayer">
+                  <div class="hs-grid" id="hsGrid"></div>
+                  <button class="hs-search" id="hsSearch"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>搜尋</button>
+                  <div class="hs-dock" id="hsDock"></div>
+                </div>
+                <button class="hs-done" id="hsDone" hidden>完成</button>
+              </div>
+
+              <!-- APP VIEW (Safari / web app / demo apps) -->
+              <div class="appview off" id="appView">
+                <div class="content" id="content">
+                  <div class="loadbar" id="loadbar"></div>
+                  <iframe id="frame" name="__mp_device__" title="手機預覽畫面"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-storage-access-by-user-activation"
+                    allow="clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; geolocation; camera; microphone; web-share; picture-in-picture"
+                    referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                  <div class="sfstart" id="sfStart" hidden></div>
+                  <div class="blocked" id="blocked" hidden>
+                    <div class="b-ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.1"/></svg></div>
+                    <h3>這個網頁無法在預覽中顯示</h3>
+                    <p id="blockedMsg">網站拒絕被嵌入，或連線發生錯誤。</p>
+                    <div class="b-acts"><button class="sec" id="btnRetry">重試</button><button id="btnOpenTab">在電腦瀏覽器開啟</button></div>
+                  </div>
+                </div>
+                <div class="fakeapp" id="fakeApp" hidden></div>
+                <div class="safaribar" id="safariBar">
+                  <button class="sf-btn" id="sfBack" aria-label="上一頁"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+                  <div class="sf-pill" id="sfPill"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></svg><span class="host" id="sfHost">搜尋或輸入網站名稱</span><span class="sf-re" id="sfReload"><svg class="i" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 4v5h-5"/></svg></span></div>
+                  <button class="sf-btn" id="sfMore" aria-label="分享與更多"><svg class="i" viewBox="0 0 24 24" style="stroke-width:3"><path d="M6 12h.01M12 12h.01M18 12h.01"/></svg></button>
+                </div>
+                <div class="sheet-dim" id="sheetDim" hidden></div>
+                <div class="sheet" id="shareSheet">
+                  <div class="grab"></div>
+                  <div class="sh-head"><div id="shIcon"></div><div class="sh-meta"><div class="sh-t" id="shTitle"></div><div class="sh-u" id="shUrl"></div></div><button class="sh-x" data-close><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+                  <div class="sh-group">
+                    <button class="sh-item hl" id="actA2HS">加入主畫面<svg class="i" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg></button>
+                    <button class="sh-item" id="actCopy">拷貝連結<svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+                  </div>
+                  <div class="sh-group">
+                    <button class="sh-item" id="actReload">重新載入<svg class="i" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 4v5h-5"/></svg></button>
+                    <button class="sh-item" id="actOpen">在電腦瀏覽器開啟<svg class="i" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"/></svg></button>
+                  </div>
+                </div>
+                <div class="sheet tall" id="a2Sheet">
+                  <div class="a2-nav"><button data-close>取消</button><b>加入主畫面</b><button class="add" id="a2Add">加入</button></div>
+                  <div class="a2-card"><div id="a2Icon"></div><div class="a2-fields"><input class="a2-name" id="a2Name" maxlength="30" spellcheck="false"><div class="a2-url" id="a2Url"></div></div></div>
+                  <div class="a2-row"><span>以網頁 App 開啟</span><span class="ios-sw" id="a2Web"></span></div>
+                  <div class="a2-note">主畫面上會加入一個圖示，讓你快速開啟這個網站。以網頁 App 開啟時，不會顯示 Safari 的網址列與工具列。</div>
+                </div>
+                <div class="splash" id="splash"><div class="splash-ic" id="splashIc"></div></div>
+              </div>
+
+              <div class="hint" id="hint" hidden></div>
+              <div class="home-zone" id="homeZone" title="點一下或往上滑回主畫面"></div>
+              <div class="home-ind" id="homeInd"></div>
+              <div class="capture" id="capture"></div>
+              <div class="touch-layer" id="touchLayer">
+                <canvas id="trail"></canvas>
+                <div class="finger" id="finger">
+                  <svg class="f-svg" viewBox="-40 -40 80 200">
+                    <defs>
+                      <linearGradient id="fFade" gradientUnits="userSpaceOnUse" x1="0" y1="45" x2="0" y2="150"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+                      <mask id="fMask" maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="200"><rect x="-40" y="-40" width="80" height="200" fill="url(#fFade)"/></mask>
+                    </defs>
+                    <ellipse class="f-contact" cx="0" cy="0" rx="12" ry="14"/>
+                    <g mask="url(#fMask)">
+                      <path class="f-shadow" d="M-19 4C-19-24 19-24 19 4C20 40 23 90 24 160L-24 160C-23 90-20 40-19 4Z"/>
+                      <path class="f-body" d="M-19 4C-19-24 19-24 19 4C20 40 23 90 24 160L-24 160C-23 90-20 40-19 4Z"/>
+                      <path class="f-nail" d="M-11-3C-11-15 11-15 11-3L11 17C4 21-4 21-11 17Z"/>
+                      <path class="f-line" d="M-12 60Q0 66 12 60"/><path class="f-line" d="M-10 67Q0 72 10 67"/>
+                    </g>
+                    <circle class="f-ring-s" r="10"/><circle class="f-ring" r="10"/><circle class="f-dot" r="2.6"/>
+                  </svg>
+                  <div class="f-circle"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dev-label" id="devLabel"></div>
+  </div>
+</main>
+
+<!-- ================= TOOL DOCK ================= -->
+<div class="dock-wrap">
+  <nav class="dock" id="dock">
+    <button class="dbtn" id="btnHome" data-tip="回主畫面 (H)"><svg class="i" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg><span class="lbl">主畫面</span></button>
+    <div class="sep"></div>
+    <div class="dock-item">
+      <button class="dbtn" data-pop="devicePop" data-tip="選擇裝置 (1–4)">
+        <svg class="i" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.8"/><path d="M10.5 5.3h3"/></svg>
+        <span class="dev-name-btn" id="devNameBtn">iPhone</span><svg class="i chev" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
+      </button>
+      <div class="pop" id="devicePop">
+        <div class="pop-title">裝置</div><div id="devList"></div>
+        <div class="pop-title">機身顏色</div><div class="swatches" id="finishList"></div>
+        <div class="divider" style="margin-top:14px"></div>
+        <button class="row toggle" id="resetHome" style="width:100%;text-align:left"><span>重設主畫面<small>移除所有加入主畫面的網站</small></span><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+        <div class="pop-title">資料與同步</div>
+        <div class="sync-line" id="syncLine"><span class="dot"></span><span id="syncText">未同步</span></div>
+        <div class="pbtns">
+          <button class="pbtn" id="btnExport"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg>匯出備份</button>
+          <button class="pbtn" id="btnImport"><svg class="i" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19h14"/></svg>匯入備份</button>
+        </div>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <button class="dbtn" id="btnRotate" data-tip="旋轉 (R)"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="10" width="13" height="10" rx="2"/><path d="M8.5 6.5h5a5 5 0 0 1 5 5v1"/><path d="M16.3 10.8l2.2 2.2 2.2-2.2"/></svg></button>
+    <button class="dbtn" id="btnDark" data-tip="iOS 深色模式 (D)"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg><span class="lbl">深色</span></button>
+    <div class="seg" id="segMode" data-tip="網頁顯示模式 (M)">
+      <button data-v="safari">Safari</button><button data-v="app">Web App</button><button data-v="full">全螢幕</button>
+    </div>
+    <div class="sep"></div>
+    <div class="dock-item">
+      <div class="split" id="fingerSplit">
+        <button class="dbtn" id="btnFinger" data-tip="手指指標 (F)">
+          <svg class="i" viewBox="0 0 24 24"><path d="M9 11.5V5a1.6 1.6 0 0 1 3.2 0v5.5"/><path d="M12.2 10V8.8a1.6 1.6 0 0 1 3.2 0v2"/><path d="M15.4 10.8a1.6 1.6 0 0 1 3.2 0V15a6 6 0 0 1-6 6h-.9a5 5 0 0 1-4.1-2.1L4.8 15.4a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
+          <span class="lbl">手指</span>
+        </button>
+        <button class="dbtn" data-pop="fingerPop" data-tip="觸控效果設定"><svg class="i chev" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+      </div>
+      <div class="pop" id="fingerPop">
+        <div class="row"><span>指標樣式</span><div class="seg sm" id="segStyle"><button data-v="finger">手指線框</button><button data-v="dot">觸控圓點</button></div></div>
+        <div class="row"><span>慣用手</span><div class="seg sm" id="segHand"><button data-v="right">右手</button><button data-v="left">左手</button></div></div>
+        <div class="row"><span>效果顏色</span><div class="swatches sm" id="accentList"></div></div>
+        <div class="divider"></div>
+        <label class="row toggle" data-key="ripple"><span>點擊波紋<small>按下時的擴散圈與閃光</small></span><span class="sw"></span></label>
+        <label class="row toggle" data-key="trail"><span>滑動軌跡<small>拖曳時留下漸隱的光跡</small></span><span class="sw"></span></label>
+        <label class="row toggle" data-key="longpress"><span>長按提示<small>按住不放出現進度環＋震動</small></span><span class="sw"></span></label>
+        <label class="row toggle" data-key="sound"><span>點擊音效<small>輕微的觸覺「喀」聲</small></span><span class="sw"></span></label>
+        <div class="divider"></div>
+        <div class="pop-sub" id="extSub"><span class="dot"></span><span>以下功能需要輔助擴充</span></div>
+        <label class="row toggle ext" data-key="dragScroll"><span>拖曳捲動<small>像手指一樣按住拖動來捲動，有慣性</small></span><span class="sw"></span></label>
+        <label class="row toggle ext" data-key="hideScrollbar"><span>隱藏捲軸<small>和 iPhone 一樣看不到桌機捲軸</small></span><span class="sw"></span></label>
+        <div class="divider"></div>
+        <label class="row toggle" data-key="present"><span>簡報模式<small>只展示手指與點擊，不實際操作網頁</small></span><span class="sw"></span></label>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="zoom">
+      <button class="dbtn" id="zoomOut" data-tip="縮小 (−)"><svg class="i" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+      <button class="dbtn zoom-val" id="zoomVal" data-tip="適應視窗 / 實際大小 (0)">適應</button>
+      <button class="dbtn" id="zoomIn" data-tip="放大 (+)"><svg class="i" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
+    </div>
+    <div class="sep"></div>
+    <button class="dbtn" id="btnShot" data-tip="截圖 PNG (C)"><svg class="i" viewBox="0 0 24 24"><path d="M4 8.5h3l1.8-2.8h6.4L17 8.5h3V19H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg><span class="lbl">截圖</span></button>
+    <button class="dbtn rec" id="btnRec" data-tip="錄影 (V)"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><span class="lbl" id="recLbl">錄影</span></button>
+  </nav>
+</div>
+
+<div class="recpill" id="recPill" hidden><span class="rdot"></span><span id="recTime">00:00</span><button id="recStop">停止並儲存</button></div>
+<div class="toast" id="toast"></div>
+
+<!-- ================= HELP ================= -->
+<dialog id="help">
+  <div class="dlg-h"><h2>Mobile Preview</h2><button class="ibtn" id="helpClose"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="dlg-tabs"><div class="seg sm" id="helpTabs" style="display:inline-flex"><button data-v="tips">玩法</button><button data-v="ext">輔助擴充</button><button data-v="keys">快捷鍵</button></div></div>
+  <div class="dlg-b">
+    <section data-tab="tips">
+      <ol class="steps">
+        <li><b>像真的 iPhone 一樣用</b>：主畫面點 <b>Safari</b>（或上方網址列直接輸入）→ 網站在手機的 Safari 開啟。</li>
+        <li><b>加入主畫面</b>：Safari 右下角 <b>···</b> →「加入主畫面」→ 可改名稱 →「加入」，會回到主畫面並跳出新圖示。</li>
+        <li><b>像 App 一樣打開</b>：點主畫面上的網站圖示，會從圖示「展開」成全螢幕 Web App（沒有網址列）。</li>
+        <li><b>回主畫面</b>：點手機底部的 Home 條、往上滑，或按 <kbd>H</kbd>，畫面會縮回圖示。</li>
+        <li><b>編輯主畫面</b>：長按任一圖示進入抖動模式，網站圖示左上角的「−」可移除，點「完成」結束。</li>
+        <li><b>錄影 / 截圖</b>：瀏覽器會詢問分享「這個分頁」，選擇後只擷取手機本體（含手指與點擊效果）。截圖會自動去背成手機外形。</li>
+        <li><b>簡報模式</b>：開會講解時只顯示手指，不會誤觸網頁。網址列會帶 <code>?url=…&amp;device=…</code>，可存成書籤。</li>
+      </ol>
+    </section>
+    <section data-tab="ext" hidden>
+      <p class="note" style="margin-top:0">瀏覽器的安全機制讓網頁<b>無法得知滑鼠在其他網站框架裡的位置</b>，很多網站也禁止被嵌入。安裝同資料夾裡的 <code>mobile-preview-helper</code> 擴充功能（只作用在本工具的分頁）即可解鎖：</p>
+      <div class="unlock">
+        <div><b>👆 手指跟隨網頁內</b>在網頁上移動、點擊都會顯示手指與點擊效果</div>
+        <div><b>🔓 解除嵌入限制</b>大多數「拒絕連線」的網站也能顯示</div>
+        <div><b>📱 真正的 iPhone UA</b>網站會判斷成 iPhone Safari，給你行動版內容</div>
+        <div><b>🖐 拖曳捲動＋網站圖示</b>像手指拖動頁面；加入主畫面時抓網站的 App 圖示與名稱</div>
+      </div>
+      <ol class="steps">
+        <li>Chrome 網址列輸入 <code>chrome://extensions</code>（Edge 為 <code>edge://extensions</code>）</li>
+        <li>開啟右上角「<b>開發人員模式</b>」</li>
+        <li>點「<b>載入未封裝項目</b>」，選擇 <code>mobile-preview-helper</code> 資料夾</li>
+        <li>在該擴充功能的「詳細資料」中開啟「<b>允許存取檔案網址</b>」（本工具是本機 HTML 檔）</li>
+        <li>重新整理本頁，右上角顯示 <span style="color:var(--ok)">● 擴充已連線</span> 即完成</li>
+      </ol>
+      <p class="note">安全設計：擴充只會在「本機檔案 / localhost」開啟的本工具分頁內解除嵌入限制，離開或關閉分頁即自動還原，不影響平常瀏覽。iframe 屬於第三方環境，部分網站的登入狀態可能不會帶入。</p>
+    </section>
+    <section data-tab="keys" hidden>
+      <div class="keys">
+        <div><span>輸入網址</span><kbd>Ctrl L</kbd></div><div><span>回主畫面</span><kbd>H</kbd></div>
+        <div><span>旋轉</span><kbd>R</kbd></div><div><span>手指開關</span><kbd>F</kbd></div>
+        <div><span>切換網頁模式</span><kbd>M</kbd></div><div><span>切換裝置</span><kbd>1 – 4</kbd></div>
+        <div><span>上一頁</span><kbd>Alt ←</kbd></div><div><span>放大 / 縮小</span><kbd>+ / −</kbd></div>
+        <div><span>適應 / 實際大小</span><kbd>0</kbd></div><div><span>截圖</span><kbd>C</kbd></div>
+        <div><span>錄影開始 / 停止</span><kbd>V</kbd></div><div><span>深淺色</span><kbd>T</kbd></div>
+      </div>
+      <p class="note">點進手機網頁後，鍵盤焦點會在網頁內；點一下手機外的區域即可再用快捷鍵。也可以在畫面任何地方直接 <kbd>Ctrl V</kbd> 貼上網址。</p>
+    </section>
+  </div>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ================= data ================= */
+const DEVICES = {
+  iphone18pro:    {name:'iPhone 18 Pro',     w:402, h:874, r:62, bz:12, band:5},
+  iphone18promax: {name:'iPhone 18 Pro Max', w:440, h:956, r:66, bz:12, band:5},
+  iphoneair:      {name:'iPhone Air',        w:420, h:912, r:64, bz:11, band:4},
+  iphone17:       {name:'iPhone 17',         w:402, h:874, r:62, bz:13, band:5},
+};
+const FINISHES = {
+  silver:{name:'銀色',base:'#d6d7da',hi:'#f8f8f9',lo:'#9c9ea3'}, deepblue:{name:'深藍',base:'#33415c',hi:'#62728f',lo:'#18202f'},
+  orange:{name:'橙色',base:'#d8652b',hi:'#f6a06a',lo:'#8a3a12'}, black:{name:'太空黑',base:'#2c2d30',hi:'#5d5f64',lo:'#121214'},
+  sky:{name:'天藍',base:'#b6cbe0',hi:'#e6f0f9',lo:'#7c94ab'}, gold:{name:'淺金',base:'#e2d3b3',hi:'#f9f2e2',lo:'#ad9c76'},
+  sage:{name:'鼠尾草',base:'#b3bfa3',hi:'#dfe7d4',lo:'#7a876a'}, lavender:{name:'薰衣草',base:'#c8bddb',hi:'#ede7f6',lo:'#8f82a7'},
+};
+const ACCENTS = {white:'#ffffff', blue:'#0a84ff', orange:'#ee4d2d', green:'#30d158', pink:'#ff375f', yellow:'#ffd60a'};
+const SAMPLES = ['shopee.tw','apple.com/tw','wikipedia.org','example.com'];
+const WEEK = '日一二三四五六';
+const clockHands = d => {
+  const h = (d.getHours()%12 + d.getMinutes()/60) * 30, m = d.getMinutes() * 6;
+  const hand = (a, len, w, c) => { const r = (a-90)*Math.PI/180; return `<line x1="32" y1="32" x2="${(32+Math.cos(r)*len).toFixed(1)}" y2="${(32+Math.sin(r)*len).toFixed(1)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`; };
+  let ticks = ''; for (let i=0;i<12;i++){ const r=i*Math.PI/6; ticks += `<line x1="${(32+Math.cos(r)*21.5).toFixed(1)}" y1="${(32+Math.sin(r)*21.5).toFixed(1)}" x2="${(32+Math.cos(r)*24).toFixed(1)}" y2="${(32+Math.sin(r)*24).toFixed(1)}" stroke="#555" stroke-width="1.2"/>`; }
+  return `<circle cx="32" cy="32" r="26" fill="#fff"/>${ticks}${hand(h,13,2.6,'#111')}${hand(m,19,2,'#111')}<line x1="32" y1="32" x2="32" y2="12" stroke="#ff9500" stroke-width="1" transform="rotate(${d.getSeconds()*6} 32 32)"/><circle cx="32" cy="32" r="2" fill="#ff9500"/>`;
+};
+const petals = () => ['#f9b233','#f5d33b','#a8d54a','#4fc3a1','#3a9bf0','#8a6be8','#e85d9c','#f2754b']
+  .map((c,i) => `<ellipse cx="32" cy="20" rx="6.5" ry="12" fill="${c}" opacity=".82" transform="rotate(${i*45} 32 32)" style="mix-blend-mode:multiply"/>`).join('');
+const APPS = {
+  calendar:{name:'行事曆', bg:'#fff', dyn:true, glyph:d => `<text x="32" y="19" text-anchor="middle" font-size="9.5" font-weight="600" fill="#ff3b30" font-family="-apple-system,'PingFang TC','Microsoft JhengHei',sans-serif">星期${WEEK[d.getDay()]}</text><text x="32" y="51" text-anchor="middle" font-size="31" font-weight="300" fill="#1c1c1e" font-family="-apple-system,'Segoe UI',sans-serif">${d.getDate()}</text>`},
+  photos:{name:'照片', bg:'#fff', glyph:petals},
+  camera:{name:'相機', bg:'linear-gradient(#ececf0,#b8b9bf)', glyph:() => `<rect x="12" y="22" width="40" height="27" rx="6" fill="#2f2f33"/><path d="M24 22.5l3-5h10l3 5z" fill="#2f2f33"/><circle cx="32" cy="35.5" r="9.5" fill="#e6e6ea"/><circle cx="32" cy="35.5" r="6.5" fill="#2f2f33"/><circle cx="30" cy="33.5" r="1.8" fill="#6d7fa8"/><circle cx="45.5" cy="27" r="1.8" fill="#f5c02e"/>`},
+  weather:{name:'天氣', bg:'linear-gradient(#4aa8ff,#1e5fd8)', glyph:() => `<circle cx="25" cy="25" r="9.5" fill="#ffd43b"/><path fill="#fff" d="M22 47h22.5a8.5 8.5 0 0 0 .6-17 11 11 0 0 0-21.2 3.2A6.9 6.9 0 0 0 22 47z"/>`},
+  clock:{name:'時鐘', bg:'#111', dyn:true, glyph:clockHands},
+  maps:{name:'地圖', bg:'linear-gradient(135deg,#dff2cf,#f6efd9)', glyph:() => `<path d="M40 38q10-5 26 4v24H38z" fill="#9fd3f5"/><path d="M-2 46C18 42 26 26 66 20" stroke="#fff" stroke-width="8" fill="none"/><path d="M-2 46C18 42 26 26 66 20" stroke="#f7c948" stroke-width="2.6" fill="none"/><path d="M32 12a8.5 8.5 0 0 0-8.5 8.5c0 6.4 8.5 14 8.5 14s8.5-7.6 8.5-14A8.5 8.5 0 0 0 32 12z" fill="#ff3b30"/><circle cx="32" cy="20.5" r="3.2" fill="#fff"/>`},
+  notes:{name:'備忘錄', bg:'#fff', glyph:() => `<rect width="64" height="17" fill="#ffd23f"/><path d="M10 28h44M10 37h44M10 46h44M10 55h28" stroke="#d6d6dc" stroke-width="1.6"/>`},
+  settings:{name:'設定', bg:'linear-gradient(#a3a8b0,#6b7079)', glyph:() => `<circle cx="32" cy="32" r="19" fill="none" stroke="#e9eaee" stroke-width="7" stroke-dasharray="4.6 4.35"/><circle cx="32" cy="32" r="15" fill="#e9eaee"/><circle cx="32" cy="32" r="10" fill="#8b9099"/><circle cx="32" cy="32" r="4.5" fill="#e9eaee"/>`},
+  phone:{name:'電話', bg:'linear-gradient(#6ff38a,#13c23f)', glyph:() => `<path fill="#fff" d="M23 15.6c1.3-.6 2.8-.1 3.5 1.1l3.2 5.6c.7 1.2.4 2.7-.6 3.6L26.5 28c1.6 3.9 4.4 7 8.2 8.9l2.3-2.5c.9-1 2.4-1.2 3.6-.5l5.5 3.4c1.2.7 1.6 2.2 1 3.5l-1.6 3.4c-.8 1.7-2.6 2.6-4.4 2.3C26.2 46.6 17.9 38.4 16.7 26.1c-.2-1.8.8-3.6 2.5-4.4z"/>`},
+  safari:{name:'Safari', bg:'linear-gradient(#ffffff,#dfe8f5)', glyph:() => `<circle cx="32" cy="32" r="23" fill="#1f8fff"/><circle cx="32" cy="32" r="19.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-dasharray=".8 2.27" opacity=".9"/><path d="M43 21L35.2 35.2 28.8 28.8z" fill="#ff3b30"/><path d="M21 43l7.8-14.2 6.4 6.4z" fill="#fff"/>`},
+  messages:{name:'訊息', bg:'linear-gradient(#6ff38a,#13c23f)', glyph:() => `<path fill="#fff" d="M32 15c-11.6 0-21 7.4-21 16.5 0 5.4 3.3 10.2 8.4 13.2-.5 2.6-2 5-4.2 6.8 3.8.2 7.4-1 10.3-3.4 2.1.6 4.3.9 6.5.9 11.6 0 21-7.4 21-16.5S43.6 15 32 15z"/>`},
+  music:{name:'音樂', bg:'linear-gradient(#ff6b86,#fa233b)', glyph:() => `<path fill="#fff" d="M42 14.5v24a6.5 6.5 0 1 1-3.2-5.6V22.6l-13.6 3.2V43a6.5 6.5 0 1 1-3.2-5.6V20.4z"/>`},
+};
+const GRID_APPS = ['calendar','photos','camera','weather','clock','maps','notes','settings'];
+const DOCK_APPS = ['phone','safari','messages','music'];
+const BTN_SPEC = [{side:'L',at:.185,len:.034},{side:'L',at:.258,len:.068},{side:'L',at:.342,len:.068},{side:'R',at:.27,len:.105},{side:'R',at:.6,len:.072,flush:true}];
+const STATUS_H = 62, SAFARI_H = 86, SAFARI_H_LAND = 56, LAND_INSET = 62, PAD = 4;
+
+/* ================= state ================= */
+const LS_KEY = 'mobile-preview:v2';
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch { return null; } },
+  set(v){ try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch {} },
+};
+const DEFAULTS = {
+  device:'iphone18pro', finish:'silver', orient:'portrait', mode:'safari', zoom:'fit', theme:null, safariUrl:'', iosDark:false,
+  finger:{on:true, style:'finger', hand:'right', accent:'white', ripple:true, trail:true, longpress:true, sound:false, dragScroll:true, hideScrollbar:true, present:false},
+  recents:[], clips:[],
+};
+const saved = store.get() || {};
+const state = {...DEFAULTS, ...saved, finger:{...DEFAULTS.finger, ...(saved.finger || {})},
+  recents:Array.isArray(saved.recents) ? saved.recents : [], clips:Array.isArray(saved.clips) ? saved.clips : []};
+state.finger.present = false;
+if (!DEVICES[state.device]) state.device = DEFAULTS.device;
+if (!FINISHES[state.finish]) state.finish = DEFAULTS.finish;
+if (!ACCENTS[state.finger.accent]) state.finger.accent = 'white';
+const qp = new URLSearchParams(location.search);
+if (DEVICES[qp.get('device')]) state.device = qp.get('device');
+if (['portrait','landscape'].includes(qp.get('orient'))) state.orient = qp.get('orient');
+const initialUrl = qp.get('url') || '';
+/* Settings + home screen that follow you across devices (Chrome sync via the helper extension, or export/import). */
+const SYNC_KEYS = ['device','finish','orient','mode','zoom','theme','iosDark','safariUrl','finger','recents','clips'];
+const pickSync = s => { const o = {}; for (const k of SYNC_KEYS) o[k] = s[k]; o.finger = {...s.finger, present:false}; return o; };
+const syncInfo = {on:false, last:0};
+function save(){
+  state.savedAt = Date.now();
+  store.set(state);
+  if (syncInfo.on) window.postMessage({type:'mp:sync-save', payload:{data:pickSync(state), ts:state.savedAt}}, '*');
+}
+let curUrl = '';                    // what the iframe currently shows
+let view = 'home', current = null;  // current = {kind:'safari'|'clip'|'fake', id}
+let pageMeta = {};
+
+/* ================= elements ================= */
+const el = {
+  viewport:$('#viewport'), scaler:$('#scaler'), shell:$('#shell'), device:$('#device'), bezel:$('#bezel'), screen:$('#screen'),
+  buttons:$('#buttons'), island:$('#island'), statusbar:$('#statusbar'), home:$('#home'), hsLayer:$('#hsLayer'), hsGrid:$('#hsGrid'), hsDock:$('#hsDock'),
+  appView:$('#appView'), content:$('#content'), frame:$('#frame'), loadbar:$('#loadbar'), sfStart:$('#sfStart'), fake:$('#fakeApp'),
+  safari:$('#safariBar'), sfHost:$('#sfHost'), splash:$('#splash'), splashIc:$('#splashIc'), hint:$('#hint'), blocked:$('#blocked'),
+  touch:$('#touchLayer'), finger:$('#finger'), trail:$('#trail'), devLabel:$('#devLabel'), urlInput:$('#urlInput'), urlField:$('#urlField'),
+  recents:$('#recents'), toast:$('#toast'), help:$('#help'), dim:$('#sheetDim'),
+};
+let scale = 1, geo = {W:402, H:874};
+
+/* ================= helpers ================= */
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let toastTimer;
+function toast(msg, ms=2200){ el.toast.textContent = msg; el.toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.toast.classList.remove('show'), ms); }
+const cvs = document.createElement('canvas').getContext('2d');
+function parseColor(c){
+  cvs.fillStyle = '#000'; cvs.fillStyle = c || '#fff'; const v = cvs.fillStyle;
+  if (v[0] === '#') return [parseInt(v.slice(1,3),16), parseInt(v.slice(3,5),16), parseInt(v.slice(5,7),16), 1];
+  const m = v.match(/[\d.]+/g) || [255,255,255,1]; return [+m[0], +m[1], +m[2], m[3] == null ? 1 : +m[3]];
+}
+function isDark(c){ const [r,g,b,a] = parseColor(c); if (a < .3) return false; return (0.299*r + 0.587*g + 0.114*b) < 150; }
+function hostOf(u){ try { return new URL(u).hostname.replace(/^www\./,''); } catch { return u || ''; } }
+function normalizeUrl(raw){
+  const s = (raw || '').trim(); if (!s) return '';
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(s) || /^(about|data):/i.test(s)) return s;
+  if (/^(localhost|127\.|0\.0\.0\.0|\d{1,3}(\.\d{1,3}){3}|\[)/i.test(s)) return 'http://' + s;
+  if (/\s/.test(s) || !/\.[a-z]{2,}/i.test(s)) return 'https://www.google.com/search?q=' + encodeURIComponent(s);
+  return 'https://' + s;
+}
+function colorFor(str){ let h = 0; for (const ch of str) h = (h*31 + ch.charCodeAt(0)) >>> 0; return `hsl(${h % 360} 62% 52%)`; }
+function download(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+function iconHTML(id, d = new Date()){ const a = APPS[id]; return `<div class="ic" style="background:${a.bg}"><svg viewBox="0 0 64 64">${a.glyph(d)}</svg></div>`; }
+function clipIconHTML(c){
+  const host = hostOf(c.url), col = colorFor(host);
+  const letter = esc(((c.name || host || '?').trim()[0] || '?').toUpperCase());
+  return `<div class="ic" style="background:linear-gradient(160deg,${col},color-mix(in srgb,${col} 62%,#000))"><svg viewBox="0 0 64 64"><text x="32" y="43" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="-apple-system,'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif">${letter}</text></svg>${c.icon ? `<img src="${esc(c.icon)}" alt="" draggable="false" onerror="this.remove()">` : ''}</div>`;
+}
+
+/* ================= theme / finish ================= */
+function applyTheme(){
+  const t = state.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.dataset.theme = t;
+  $('#themeIcon').innerHTML = t === 'dark' ? '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
+    : '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>';
+}
+$('#btnTheme').onclick = () => { state.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; applyTheme(); save(); };
+function applyFinish(){ const f = FINISHES[state.finish], r = document.documentElement.style; r.setProperty('--f-base', f.base); r.setProperty('--f-hi', f.hi); r.setProperty('--f-lo', f.lo); }
+
+/* ================= device layout ================= */
+function layout(){
+  const d = DEVICES[state.device], land = state.orient === 'landscape';
+  const W = land ? d.h : d.w, H = land ? d.w : d.h, edge = d.bz + d.band, OW = W + 2*edge, OH = H + 2*edge;
+  geo = {W, H, OW, OH, SW: OW + 2*PAD, SH: OH + 2*PAD, outerR: d.r + edge, r: d.r};
+  const dv = el.device.style;
+  dv.left = PAD+'px'; dv.top = PAD+'px'; dv.width = OW+'px'; dv.height = OH+'px';
+  dv.setProperty('--or', (d.r+edge)+'px'); dv.setProperty('--br', (d.r+d.bz)+'px'); dv.setProperty('--sr', d.r+'px');
+  el.bezel.style.inset = d.band+'px';
+  Object.assign(el.screen.style, {left: d.bz+'px', top: d.bz+'px', width: W+'px', height: H+'px'});
+  el.shell.style.width = geo.SW+'px'; el.shell.style.height = geo.SH+'px';
+  el.buttons.innerHTML = '';
+  for (const b of BTN_SPEC){
+    const n = document.createElement('div'); n.className = 'sbtn' + (b.flush ? ' flush' : '');
+    const thick = b.flush ? 3 : 4, off = b.flush ? 1 : 0, pos = d.h * b.at + PAD, len = d.h * b.len;
+    if (!land){
+      Object.assign(n.style, {top:pos+'px', height:len+'px', width:thick+'px', left:(b.side === 'L' ? PAD - thick + 1 + off : PAD + OW - 1 - off)+'px'});
+    } else {
+      n.classList.add('h');
+      Object.assign(n.style, {left:pos+'px', width:len+'px', height:thick+'px', top:(b.side === 'L' ? PAD + OH - 1 - off : PAD - thick + 1 + off)+'px'});
+    }
+    el.buttons.appendChild(n);
+  }
+  el.island.className = 'island ' + (land ? 'l' : 'p');
+  Object.assign(el.island.style, land ? {width:'37px', height:'126px', left:'11px', top:(H-126)/2+'px'} : {width:'126px', height:'37px', left:(W-126)/2+'px', top:'11px'});
+  let t=0, r=0, b=0, l=0, showSafari=false;
+  if (!land){
+    if (state.mode === 'safari'){ t = STATUS_H; b = SAFARI_H; showSafari = true; }
+    else if (state.mode === 'app') t = STATUS_H;
+  } else if (state.mode !== 'full'){
+    l = r = LAND_INSET; if (state.mode === 'safari'){ b = SAFARI_H_LAND; showSafari = true; }
+  }
+  Object.assign(el.content.style, {top:t+'px', right:r+'px', bottom:b+'px', left:l+'px'});
+  el.statusbar.hidden = land;
+  el.safari.hidden = !showSafari;
+  el.safari.style.height = (land ? SAFARI_H_LAND : SAFARI_H)+'px';
+  el.screen.classList.toggle('land', land);
+  el.trail.width = W*2; el.trail.height = H*2; trailCtx.setTransform(2,0,0,2,0,0);
+  updateLabel();
+  $('#devNameBtn').textContent = d.name;
+  fit(); sendCfg();
+}
+function updateLabel(){
+  const d = DEVICES[state.device];
+  const where = view === 'home' ? '主畫面' : current?.kind === 'fake' ? APPS[current.id].name : ({safari:'Safari', app:'Web App', full:'全螢幕'}[state.mode]);
+  el.devLabel.innerHTML = `<b>${d.name}</b><i></i>${geo.W} × ${geo.H}<i></i>${state.orient === 'landscape' ? '橫向' : '直向'}<i></i>${esc(where)}`;
+}
+function fit(){
+  const vw = el.viewport.clientWidth - 48, vh = el.viewport.clientHeight - 66;
+  const fitS = clamp(Math.min(vw/geo.SW, vh/geo.SH), .2, 1.5);
+  scale = state.zoom === 'fit' ? fitS : state.zoom;
+  el.scaler.style.width = geo.SW*scale+'px'; el.scaler.style.height = geo.SH*scale+'px';
+  el.shell.style.transform = `scale(${scale})`;
+  $('#zoomVal').textContent = state.zoom === 'fit' ? `適應 · ${Math.round(scale*100)}%` : `${Math.round(scale*100)}%`;
+}
+function setZoom(z){ state.zoom = z === 'fit' ? 'fit' : clamp(Math.round(z*20)/20, .25, 2); el.scaler.classList.remove('instant'); fit(); save(); setTimeout(() => el.scaler.classList.add('instant'), 400); }
+new ResizeObserver(() => fit()).observe(el.viewport);
+function rotate(){
+  const toLand = state.orient === 'portrait';
+  state.orient = toLand ? 'landscape' : 'portrait';
+  layout(); save();
+  el.device.animate([{transform:`rotate(${toLand ? 90 : -90}deg)`}, {transform:'rotate(0deg)'}], {duration:520, easing:'cubic-bezier(.2,.8,.2,1)'});
+  el.buttons.animate([{opacity:0}, {opacity:0, offset:.6}, {opacity:1}], {duration:520});
+}
+function haptic(){ el.device.animate([{translate:'0 0'},{translate:'-1.6px 0'},{translate:'1.6px 0'},{translate:'-1px 0'},{translate:'0 0'}], {duration:200}); }
+
+/* ================= clock ================= */
+let lastMinute = -1;
+function tick(){
+  const d = new Date(), t = `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  $('#sbTime').textContent = t;
+  if (d.getMinutes() !== lastMinute){
+    lastMinute = d.getMinutes();
+    $$('[data-dyn]').forEach(n => { const a = APPS[n.dataset.dyn]; n.querySelector('svg').innerHTML = a.glyph(d); });
+    const wd = $('#wgDay'), wn = $('#wgDate'); if (wd){ wd.textContent = `星期${WEEK[d.getDay()]}`; wn.textContent = d.getDate(); }
+  }
+}
+setInterval(tick, 5000);
+
+/* ================= home screen ================= */
+function renderHome(){
+  const d = new Date();
+  const appBtn = id => `<button class="app" data-app="${id}">${iconHTML(id, d).replace('class="ic"', APPS[id].dyn ? `class="ic" data-dyn="${id}"` : 'class="ic"')}<span>${APPS[id].name}</span></button>`;
+  el.hsGrid.innerHTML =
+    `<div class="widget"><div class="wg-l"><div class="wg-day" id="wgDay">星期${WEEK[d.getDay()]}</div><div class="wg-date" id="wgDate">${d.getDate()}</div></div>
+      <div class="wg-r"><b>把網站變成 App</b><div class="wg-step"><i>1</i>點下方 Safari 開網站</div><div class="wg-step"><i>2</i>右下角 ··· → 加入主畫面</div><div class="wg-step"><i>3</i>點新圖示，像 App 展開</div></div></div>` +
+    GRID_APPS.map(appBtn).join('') +
+    state.clips.map(c => `<button class="app clip" data-clip="${esc(c.id)}">${clipIconHTML(c)}<span>${esc(c.name)}</span><i class="del" data-del="${esc(c.id)}">−</i></button>`).join('');
+  el.hsDock.innerHTML = DOCK_APPS.map(appBtn).join('');
+  healClipIcons();
+}
+// Home-screen sites saved without an icon (e.g. added before icon lookup existed) try once per session to fetch it.
+const iconTried = new Set();
+function healClipIcons(){
+  for (const c of state.clips){
+    if (c.icon || iconTried.has(c.id)) continue;
+    iconTried.add(c.id);
+    fetchSiteMeta(c.url).then(m => {
+      const cur = state.clips.find(x => x.id === c.id);
+      if (!m.icon || !cur || cur.icon) return;
+      cur.icon = m.icon; save();
+      const node = el.hsGrid.querySelector(`[data-clip="${CSS.escape(c.id)}"] .ic`);
+      if (node) node.outerHTML = clipIconHTML(cur);
+    });
+  }
+}
+let jiggle = false;
+function setJiggle(on){ jiggle = on; el.home.classList.toggle('jiggle', on); $('#hsDone').hidden = !on; }
+const jig = {timer:0, fired:false, x:0, y:0};
+el.home.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return; jig.fired = false;
+  if (jiggle || !e.target.closest('.app')) return;
+  jig.x = e.clientX; jig.y = e.clientY;
+  jig.timer = setTimeout(() => { jig.fired = true; setJiggle(true); if (!state.finger.on || !state.finger.longpress) haptic(); }, 650);
+});
+el.home.addEventListener('pointermove', e => { if (Math.hypot(e.clientX - jig.x, e.clientY - jig.y) > 8) clearTimeout(jig.timer); });
+['pointerup','pointerleave','pointercancel'].forEach(t => el.home.addEventListener(t, () => clearTimeout(jig.timer)));
+el.home.addEventListener('click', e => {
+  if (jig.fired){ jig.fired = false; return; }
+  const del = e.target.closest('[data-del]');
+  if (del){ const c = state.clips.find(x => x.id === del.dataset.del); if (c) confirmRemove(c); return; }
+  const app = e.target.closest('.app');
+  if (jiggle){ if (!app) setJiggle(false); return; }
+  if (e.target.closest('#hsSearch')){ openApp('safari', 'safari', $('#hsDock [data-app="safari"]'), {focus:true}); return; }
+  if (!app) return;
+  if (app.dataset.clip) openApp('clip', app.dataset.clip, app);
+  else if (app.dataset.app === 'safari') openApp('safari', 'safari', app);
+  else openApp('fake', app.dataset.app, app);
+});
+function confirmRemove(c){
+  iosAlert(`要移除「${c.name}」嗎？`, '移除後可以再從 Safari 的「加入主畫面」加回來。', [
+    {t:'取消'},
+    {t:'移除', destr:true, fn:() => {
+      const n = el.hsGrid.querySelector(`[data-clip="${CSS.escape(c.id)}"]`);
+      const done = () => { state.clips = state.clips.filter(x => x.id !== c.id); save(); renderHome(); setJiggle(state.clips.length > 0 && jiggle); };
+      if (n) n.animate([{transform:'scale(1)', opacity:1}, {transform:'scale(.2)', opacity:0}], {duration:240, easing:'ease-in'}).finished.then(done); else done();
+    }},
+  ]);
+}
+function iosAlert(title, msg, btns){
+  const w = document.createElement('div'); w.className = 'alert-wrap';
+  w.innerHTML = `<div class="alert"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="alert-btns"></div></div>`;
+  const box = w.querySelector('.alert-btns');
+  btns.forEach(b => { const x = document.createElement('button'); x.textContent = b.t; if (b.destr) x.className = 'destr';
+    x.onclick = () => { w.animate([{opacity:1},{opacity:0}], {duration:160}).finished.then(() => w.remove()); b.fn && b.fn(); }; box.appendChild(x); });
+  el.screen.appendChild(w);
+}
+
+/* ================= open / close app animations ================= */
+let animating = false, hsAnim = null, readyResolve = null;
+function rectOf(node){
+  const sr = el.screen.getBoundingClientRect(), s = sr.width / geo.W, r = node.getBoundingClientRect();
+  return {x:(r.left - sr.left)/s, y:(r.top - sr.top)/s, w:r.width/s, h:r.height/s};
+}
+function morphFrames(R){
+  const W = geo.W, H = geo.H, side = Math.min(W, H), k = R.w / side, cx = R.x + R.w/2, cy = R.y + R.h/2;
+  return [
+    {transform:`translate(${cx - W/2}px,${cy - H/2}px) scale(${k})`, clipPath:`inset(${(H-side)/2}px ${(W-side)/2}px round ${side*.225}px)`},
+    {transform:'translate(0px,0px) scale(1)', clipPath:`inset(0px 0px round ${geo.r}px)`},
+  ];
+}
+function setSplash(iconNode, bg){
+  const W = geo.W, H = geo.H, side = Math.min(W, H);
+  Object.assign(el.splashIc.style, {left:(W-side)/2+'px', top:(H-side)/2+'px', width:side+'px', height:side+'px', opacity:1});
+  el.splashIc.innerHTML = ''; el.splashIc.appendChild((iconNode.querySelector('.ic') || iconNode).cloneNode(true));
+  el.splash.style.background = bg; el.splash.classList.add('on');
+}
+function hideSplash(){
+  if (!el.splash.classList.contains('on')) return;
+  el.splash.animate([{opacity:1},{opacity:0}], {duration:240}).finished.then(() => { el.splash.classList.remove('on'); el.splashIc.innerHTML = ''; });
+}
+function frameReady(){ return new Promise(r => { readyResolve = r; setTimeout(r, 1800); }); }
+function iconFor(cur){
+  if (!cur) return null;
+  if (cur.kind === 'clip') return el.hsGrid.querySelector(`[data-clip="${CSS.escape(cur.id)}"]`);
+  return el.home.querySelector(`[data-app="${cur.id}"]`);
+}
+async function openApp(kind, id, iconNode, opt = {}){
+  if (animating) return;
+  closeSheets(); setJiggle(false); el.hint.hidden = true;
+  current = {kind, id}; view = 'app';
+  let ready = Promise.resolve();
+  if (kind === 'fake'){ showFake(id); }
+  else {
+    showWeb();
+    const clip = kind === 'clip' ? (state.clips.find(c => c.id === id) || {}) : null;
+    state.mode = clip && clip.web !== false ? 'app' : 'safari';
+    layout();
+    const want = opt.url ? normalizeUrl(opt.url) : clip ? clip.url : state.safariUrl;
+    const owner = kind === 'clip' ? id : 'safari';
+    if (!want) showStart();
+    else if (opt.url || el.frame.dataset.owner !== owner || !curUrl){ ready = frameReady(); load(want, owner); }
+  }
+  syncUI(); updateChrome();
+  if (opt.instant || !iconNode){ el.appView.classList.remove('off'); el.home.style.visibility = 'hidden'; if (opt.focus) focusUrl(); return; }
+  animating = true;
+  const R = rectOf(iconNode.querySelector('.ic'));
+  iconNode.style.visibility = 'hidden';
+  setSplash(iconNode, kind === 'fake' ? '#f2f2f7' : '#fff');
+  el.appView.classList.remove('off');
+  const ease = {duration:520, easing:'cubic-bezier(.16,.9,.22,1)'};
+  const a = el.appView.animate(morphFrames(R), ease);
+  el.splashIc.animate([{opacity:1},{opacity:1, offset:.2},{opacity:0}], {duration:400, fill:'forwards'});
+  hsAnim?.cancel();
+  hsAnim = el.hsLayer.animate([{transform:'scale(1)', opacity:1, filter:'blur(0px)'}, {transform:'scale(1.14)', opacity:0, filter:'blur(5px)'}], {duration:440, easing:'cubic-bezier(.3,.7,.3,1)', fill:'forwards'});
+  await a.finished;
+  iconNode.style.visibility = ''; el.home.style.visibility = 'hidden'; animating = false;
+  if (opt.focus) focusUrl();
+  await Promise.race([ready, wait(kind === 'fake' ? 60 : 1800)]);
+  hideSplash();
+}
+async function goHome(target){
+  if (view !== 'app' || animating) return;
+  closeSheets(); el.hint.hidden = true;
+  animating = true;
+  hsAnim?.cancel(); hsAnim = null;
+  el.home.style.visibility = '';
+  const node = target || iconFor(current) || el.hsDock.querySelector('[data-app="safari"]');
+  const R = rectOf(node.querySelector('.ic'));
+  node.style.visibility = 'hidden';
+  setSplash(node, 'transparent'); el.splashIc.style.opacity = 0;
+  const ease = {duration:460, easing:'cubic-bezier(.3,.75,.22,1)', fill:'forwards'};
+  const a = el.appView.animate(morphFrames(R).reverse(), ease);
+  const s = el.splashIc.animate([{opacity:0},{opacity:0, offset:.3},{opacity:1}], ease);
+  el.hsLayer.animate([{transform:'scale(1.14)', opacity:0, filter:'blur(5px)'}, {transform:'scale(1)', opacity:1, filter:'blur(0px)'}], {duration:460, easing:'cubic-bezier(.3,.75,.22,1)'});
+  await a.finished;
+  el.appView.classList.add('off'); a.cancel(); s.cancel();
+  el.splash.classList.remove('on'); el.splashIc.innerHTML = '';
+  node.style.visibility = '';
+  view = 'home'; animating = false;
+  updateChrome();
+  return node;
+}
+function showFake(id){
+  const a = APPS[id];
+  el.fake.innerHTML = `<div class="fa-title">${a.name}</div>
+    <div class="fa-card">${iconHTML(id)}<b>${a.name}</b><span>這是展示用的 App</span><small>點 Home 條、往上滑或按 H 回主畫面</small></div>
+    <div class="fa-list">${[72,54,64,46].map((w,i) => `<div class="fa-row"><i style="background:${['#ff9f0a','#30d158','#0a84ff','#bf5af2'][i]}"></i><div style="width:${w}%"></div></div>`).join('')}</div>`;
+  el.fake.hidden = false; el.appView.classList.add('is-fake');
+}
+function showWeb(){ el.fake.hidden = true; el.appView.classList.remove('is-fake'); }
+function showStart(){
+  el.sfStart.hidden = false; el.blocked.hidden = true; curUrl = '';
+  setAddress('');
+  const list = (state.recents.length ? state.recents : SAMPLES).slice(0, 8);
+  el.sfStart.innerHTML = `<div class="sfs-h">${state.recents.length ? '最近瀏覽' : '我的最愛'}</div><div class="sfs-grid">` +
+    list.map(u => { const url = normalizeUrl(u); return `<button class="sfs-tile" data-url="${esc(url)}">${clipIconHTML({url, name:hostOf(url)})}<span>${esc(hostOf(url))}</span></button>`; }).join('') +
+    `</div><div class="sfs-note">提示：開啟網站後，點右下角「···」→「加入主畫面」，就能把網站變成主畫面上的 App。</div>`;
+  const bg = state.iosDark ? '#000000' : '#f2f2f7'; setTint(bg, bg);
+}
+el.sfStart.addEventListener('click', e => { const t = e.target.closest('[data-url]'); if (t) load(t.dataset.url, 'safari'); });
+
+/* status-bar / chrome colours */
+let tint = {top:'#fff', bottom:'#fff'};
+function setTint(top, bottom){
+  tint = {top: top || '#fff', bottom: bottom || top || '#fff'};
+  el.screen.style.setProperty('--tint-top', tint.top); el.screen.style.setProperty('--tint-bottom', tint.bottom);
+  updateChrome();
+}
+function updateChrome(){
+  const onHome = view === 'home', fake = current?.kind === 'fake';
+  el.screen.classList.toggle('on-home', onHome);
+  el.screen.classList.toggle('top-dark', onHome || (!fake && isDark(tint.top)));
+  el.screen.classList.toggle('bottom-dark', onHome || (!fake && isDark(tint.bottom)));
+  $('#btnHome').disabled = onHome;
+  $('#btnBack').disabled = onHome || fake || navLoads < 2;
+  updateLabel();
+}
+
+/* ================= loading / navigation ================= */
+let navLoads = 0, gotHello = false, sameDoc = null, hintShown = false;
+function startLoading(){ el.loadbar.className = 'loadbar'; void el.loadbar.offsetWidth; el.loadbar.className = 'loadbar run'; }
+function stopLoading(){ el.loadbar.className = 'loadbar done'; }
+function setAddress(u){
+  if (document.activeElement !== el.urlInput) el.urlInput.value = u;
+  el.sfHost.textContent = u ? hostOf(u) : '搜尋或輸入網站名稱';
+  el.urlField.classList.toggle('secure', /^https:/.test(u));
+  try { const q = new URLSearchParams(location.search); if (u) q.set('url', u); else q.delete('url'); q.set('device', state.device); history.replaceState(null, '', '?' + q); } catch {}
+}
+function addRecent(u){ state.recents = [u, ...state.recents.filter(x => x !== u)].slice(0, 12); save(); }
+function load(raw, owner = 'safari'){
+  const u = normalizeUrl(raw); if (!u) return;
+  if (owner === 'safari'){ state.safariUrl = u; addRecent(u); save(); }
+  curUrl = u; pageMeta = {};
+  el.frame.dataset.owner = owner;
+  closeRecents(); el.urlInput.blur();
+  el.sfStart.hidden = true; el.blocked.hidden = true;
+  const blank = state.iosDark ? '#000000' : '#ffffff'; setTint(blank, blank);
+  gotHello = false; startLoading();
+  el.frame.src = u;
+  setAddress(u);
+}
+function navigate(raw){
+  if (!normalizeUrl(raw)) return;
+  if (view === 'app' && current?.kind === 'safari') load(raw, 'safari');
+  else if (view === 'app' && current?.kind === 'clip') load(raw, current.id);
+  else if (view === 'app') { goHome().then(() => openApp('safari', 'safari', el.hsDock.querySelector('[data-app="safari"]'), {url:raw})); }
+  else openApp('safari', 'safari', el.hsDock.querySelector('[data-app="safari"]'), {url:raw});
+}
+el.frame.addEventListener('load', () => {
+  if (!curUrl) return;
+  stopLoading(); readyResolve?.();
+  navLoads++; updateChrome();
+  attachSameOrigin(); fitFrame();
+  fetchSiteMeta(curUrl);   // warm up icon/name lookup so "加入主畫面" is instant
+  if (ext.ready){
+    const had = gotHello; gotHello = false;
+    if (!had && !sameDoc) setTimeout(() => { if (!gotHello && !sameDoc && curUrl){ $('#blockedMsg').textContent = `${curUrl}\n網站拒絕被嵌入，或連線發生錯誤。`; el.blocked.hidden = false; } }, 700);
+  } else if (!sameDoc && !hintShown && view === 'app'){
+    hintShown = true;
+    showHint('<span>畫面空白或「拒絕連線」？網站可能<b>禁止被嵌入</b>。安裝輔助擴充即可解決，也能讓手指在網頁內跟隨。</span><button>怎麼裝</button>', 9000);
+  }
+});
+function showHint(html, ms){
+  el.hint.innerHTML = html; el.hint.hidden = false;
+  el.hint.style.bottom = (el.safari.hidden ? 30 : parseInt(el.safari.style.height) + 10) + 'px';
+  const btn = el.hint.querySelector('button'); if (btn) btn.onclick = () => { el.hint.hidden = true; openHelp('ext'); };
+  clearTimeout(showHint.t); showHint.t = setTimeout(() => el.hint.hidden = true, ms);
+}
+function goBack(){ if (navLoads > 1 && view === 'app'){ navLoads -= 2; history.back(); } }
+function reload(){
+  if (!curUrl) return;
+  startLoading(); el.blocked.hidden = true; gotHello = false;
+  if (ext.ready && el.frame.contentWindow) el.frame.contentWindow.postMessage({type:'mp:reload'}, '*');
+  else { const s = curUrl; el.frame.src = 'about:blank'; setTimeout(() => el.frame.src = s, 30); navLoads = Math.max(0, navLoads - 2); }
+}
+const focusUrl = () => { el.urlInput.focus(); el.urlInput.select(); };
+$('#btnBack').onclick = goBack; $('#sfBack').onclick = goBack;
+$('#btnReload').onclick = reload;
+$('#sfReload').onclick = e => { e.stopPropagation(); reload(); };
+$('#sfPill').onclick = focusUrl;
+$('#btnRetry').onclick = () => load(curUrl, el.frame.dataset.owner);
+$('#btnOpenTab').onclick = () => window.open(curUrl, '_blank', 'noopener');
+$('#btnHome').onclick = () => goHome();
+/* ---------- sync & backup ---------- */
+const httpUrl = u => typeof u === 'string' && /^https?:\/\//i.test(u) ? u.slice(0, 2000) : '';
+function cleanData(d){
+  if (!d || typeof d !== 'object') return null;
+  const out = {};
+  if (DEVICES[d.device]) out.device = d.device;
+  if (FINISHES[d.finish]) out.finish = d.finish;
+  if (['portrait','landscape'].includes(d.orient)) out.orient = d.orient;
+  if (['safari','app','full'].includes(d.mode)) out.mode = d.mode;
+  if (d.zoom === 'fit' || (typeof d.zoom === 'number' && d.zoom >= .25 && d.zoom <= 2)) out.zoom = d.zoom;
+  if ([null,'light','dark'].includes(d.theme)) out.theme = d.theme;
+  if (typeof d.iosDark === 'boolean') out.iosDark = d.iosDark;
+  if (typeof d.safariUrl === 'string') out.safariUrl = httpUrl(d.safariUrl);
+  if (d.finger && typeof d.finger === 'object'){
+    const f = {...DEFAULTS.finger};
+    for (const k of Object.keys(f)) if (typeof d.finger[k] === typeof f[k]) f[k] = d.finger[k];
+    if (!['finger','dot'].includes(f.style)) f.style = 'finger';
+    if (!['right','left'].includes(f.hand)) f.hand = 'right';
+    if (!ACCENTS[f.accent]) f.accent = 'white';
+    f.present = false; out.finger = f;
+  }
+  if (Array.isArray(d.recents)) out.recents = d.recents.map(httpUrl).filter(Boolean).slice(0, 12);
+  if (Array.isArray(d.clips)) out.clips = d.clips
+    .filter(c => c && typeof c.id === 'string' && httpUrl(c.url))
+    .map(c => ({id:c.id.slice(0, 40), url:httpUrl(c.url), name:String(c.name || hostOf(c.url)).slice(0, 30), icon:httpUrl(c.icon) || null, web:c.web !== false}))
+    .slice(0, 60);
+  return out;
+}
+function applyData(d, ts){
+  const c = cleanData(d); if (!c) return false;
+  Object.assign(state, c);
+  state.savedAt = ts || Date.now();
+  store.set(state);
+  applyTheme(); applyFinish(); renderHome(); layout(); applyFingerUI(); syncUI(); applyIosDark(false);
+  return true;
+}
+function onSyncLoad(p){
+  syncInfo.on = true;
+  if (p && p.data && p.ts > (state.savedAt || 0)){
+    if (applyData(p.data, p.ts)) toast(`已從 Chrome 同步：主畫面 ${state.clips.length} 個網站`);
+  } else if (!p || !p.ts || p.ts < (state.savedAt || 0)){
+    window.postMessage({type:'mp:sync-save', payload:{data:pickSync(state), ts:state.savedAt || Date.now()}}, '*');
+  }
+  syncInfo.last = Date.now();
+  updateSyncUI();
+}
+function updateSyncUI(){
+  const t = d => `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  $('#syncLine').classList.toggle('ok', syncInfo.on);
+  $('#syncText').textContent = syncInfo.on
+    ? `已開啟 Chrome 帳號同步（最後同步 ${t(new Date(syncInfo.last))}）。其他電腦的 Chrome 登入同一個帳號並安裝輔助擴充，就會自動一致。`
+    : '目前只存在這個瀏覽器。安裝輔助擴充後，會用 Chrome 帳號自動同步；也可以用下方按鈕匯出／匯入。';
+}
+$('#btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify({app:'mobile-preview', version:1, exportedAt:new Date().toISOString(), data:pickSync(state)}, null, 2)], {type:'application/json'});
+  download(blob, `mobile-preview-備份-${stamp()}.json`);
+  toast(`已匯出：主畫面 ${state.clips.length} 個網站與所有設定`);
+};
+$('#btnImport').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text());
+    if (!obj || obj.app !== 'mobile-preview' || !applyData(obj.data)) throw new Error();
+    save();
+    closePops();
+    toast(`已匯入：主畫面 ${state.clips.length} 個網站與所有設定`);
+  } catch { toast('這不是 Mobile Preview 的備份檔'); }
+};
+
+$('#resetHome').onclick = () => { if (!state.clips.length){ toast('主畫面沒有加入的網站'); return; } state.clips = []; save(); renderHome(); closePops(); toast('已重設主畫面'); };
+
+/* home indicator: tap or swipe up */
+const hz = {y:0, down:false};
+$('#homeZone').addEventListener('pointerdown', e => { hz.down = true; hz.y = e.clientY; e.currentTarget.setPointerCapture(e.pointerId); });
+$('#homeZone').addEventListener('pointermove', e => { if (hz.down && hz.y - e.clientY > 30 * scale){ hz.down = false; goHome(); } });
+$('#homeZone').addEventListener('pointerup', () => { if (hz.down){ hz.down = false; goHome(); } });
+
+/* ================= share sheet & add to home screen ================= */
+function openSheet(id){
+  closeSheets(true); el.hint.hidden = true;
+  el.dim.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.dim.classList.add('on'); $(id).classList.add('on'); }));
+}
+function closeSheets(keepDim){
+  $$('.sheet.on').forEach(s => s.classList.remove('on'));
+  if (keepDim) return;
+  el.dim.classList.remove('on');
+  setTimeout(() => { if (!$$('.sheet.on').length) el.dim.hidden = true; }, 320);
+  el.urlInput.blur();
+}
+el.dim.onclick = () => closeSheets();
+$$('[data-close]').forEach(b => b.onclick = () => closeSheets());
+function cleanTitle(t){ return (t || '').split(/\s+[|\-–—·:]\s+/)[0].trim().slice(0, 24); }
+function probeImg(src){ return new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth >= 48); i.onerror = () => r(false); i.src = src; setTimeout(() => r(false), 2500); }); }
+
+/* Read a site's home-screen icon + name the way iOS does:
+   apple-touch-icon → apple-mobile-web-app-title → manifest (short_name / icons) → large favicon → apple-touch-icon.png guesses.
+   Works without the helper extension when the site allows cross-origin reads (e.g. GitHub Pages). */
+const metaCache = new Map();
+const sizeOf = s => Math.max(0, ...((s || '').match(/\d+/g) || ['0']).map(Number));
+function fetchSiteMeta(url){
+  if (!/^https?:/.test(url || '')) return Promise.resolve({});
+  if (metaCache.has(url)) return metaCache.get(url);
+  const p = (async () => {
+    const out = {};
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 5000);
+      const res = await fetch(url, {mode:'cors', credentials:'omit', signal:ctl.signal});
+      clearTimeout(t);
+      if (res.ok && /html/i.test(res.headers.get('content-type') || 'text/html')){
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        const base = res.url || url, abs = (h, b = base) => { try { return new URL(h, b).href; } catch { return ''; } };
+        out.title = (doc.querySelector('title')?.textContent || '').trim();
+        out.appTitle = (doc.querySelector('meta[name="apple-mobile-web-app-title"]')?.getAttribute('content') || '').trim();
+        const bySize = (a, b) => sizeOf(b.getAttribute('sizes')) - sizeOf(a.getAttribute('sizes'));
+        const touch = [...doc.querySelectorAll('link[rel~="apple-touch-icon"],link[rel~="apple-touch-icon-precomposed"]')].sort(bySize)[0];
+        if (touch) out.icon = abs(touch.getAttribute('href'));
+        const man = doc.querySelector('link[rel~="manifest"]');
+        if (man && (!out.icon || !out.appTitle)){
+          try {
+            const mUrl = abs(man.getAttribute('href')), m = await (await fetch(mUrl, {mode:'cors', credentials:'omit'})).json();
+            if (!out.appTitle) out.appTitle = (m.short_name || m.name || '').trim();
+            const ic = (Array.isArray(m.icons) ? m.icons : []).filter(i => i && i.src && !/monochrome/.test(i.purpose || '')).sort((a, b) => sizeOf(b.sizes) - sizeOf(a.sizes))[0];
+            if (!out.icon && ic) out.icon = abs(ic.src, mUrl);
+          } catch {}
+        }
+        if (!out.icon){
+          const fav = [...doc.querySelectorAll('link[rel~="icon"]')].filter(l => sizeOf(l.getAttribute('sizes')) >= 96 || /(1[5-9]\d|[2-9]\d\d)/.test(l.getAttribute('href') || '')).sort(bySize)[0];
+          if (fav) out.icon = abs(fav.getAttribute('href'));
+        }
+      }
+    } catch {}
+    if (!out.icon){
+      for (const g of ['apple-touch-icon.png', '/apple-touch-icon.png']){
+        try { const u = new URL(g, url).href; if (await probeImg(u)){ out.icon = u; break; } } catch {}
+      }
+    }
+    return out;
+  })();
+  metaCache.set(url, p);
+  return p;
+}
+// Live page info (extension / same-origin) wins; fetched info fills the gaps.
+async function siteMeta(url){
+  const live = url === curUrl ? pageMeta : {}, got = await fetchSiteMeta(url);
+  return {title: live.title || got.title || '', appTitle: live.appTitle || got.appTitle || '', icon: live.icon || got.icon || null};
+}
+const homeName = (m, url) => { const host = hostOf(url); return m.appTitle || cleanTitle(m.title) || (host.split('.')[0] || host).replace(/^./, c => c.toUpperCase()); };
+
+$('#sfMore').onclick = async () => {
+  if (!curUrl){ toast('先開啟一個網站'); return; }
+  const url = curUrl;
+  const fill = m => {
+    $('#shIcon').innerHTML = clipIconHTML({url, name:homeName(m, url), icon:m.icon});
+    $('#shTitle').textContent = m.title || homeName(m, url); $('#shUrl').textContent = hostOf(url);
+  };
+  fill(pageMeta);
+  openSheet('#shareSheet');
+  const m = await siteMeta(url);
+  if (curUrl === url) fill(m);
+};
+$('#actCopy').onclick = async () => { try { await navigator.clipboard.writeText(curUrl); toast('已拷貝連結'); } catch { toast('無法存取剪貼簿'); } closeSheets(); };
+$('#actReload').onclick = () => { closeSheets(); reload(); };
+$('#actOpen').onclick = () => { closeSheets(); window.open(curUrl, '_blank', 'noopener'); };
+let pending = null;
+$('#actA2HS').onclick = async () => {
+  const url = curUrl, name = homeName(pageMeta, url);
+  const p = pending = {url, name, icon: pageMeta.icon || null, web:true, edited:false};
+  const renderPrev = () => { $('#a2Icon').innerHTML = clipIconHTML({url, name: $('#a2Name').value || p.name, icon: p.icon}); };
+  $('#a2Name').value = name; $('#a2Url').textContent = url;
+  $('#a2Web').classList.remove('off');
+  renderPrev();
+  openSheet('#a2Sheet');
+  setTimeout(() => { $('#a2Name').focus(); $('#a2Name').select(); }, 450);
+  $('#a2Name').oninput = () => { p.edited = true; renderPrev(); };
+  const m = await siteMeta(url);
+  if (pending !== p) return;
+  p.icon = m.icon || p.icon; p.name = homeName(m, url);
+  if (!p.edited){ $('#a2Name').value = p.name; if (document.activeElement === $('#a2Name')) $('#a2Name').select(); }
+  renderPrev();
+};
+$('#a2Web').onclick = () => { $('#a2Web').classList.toggle('off'); if (pending) pending.web = !$('#a2Web').classList.contains('off'); };
+$('#a2Name').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('#a2Add').click(); } e.stopPropagation(); });
+$('#a2Add').onclick = async () => {
+  if (!pending) return;
+  const c = {id:'c' + Date.now().toString(36), url:pending.url, name:($('#a2Name').value.trim() || pending.name).slice(0, 30), icon:pending.icon, web:pending.web};
+  pending = null;
+  state.clips.push(c); save();
+  closeSheets(); $('#a2Name').blur();
+  renderHome();
+  await wait(260);
+  const node = el.hsGrid.querySelector(`[data-clip="${CSS.escape(c.id)}"]`);
+  node.scrollIntoView({block:'nearest'});
+  await goHome(node);
+  node.classList.add('pop'); haptic(); click(true);
+  setTimeout(() => node.classList.remove('pop'), 700);
+  toast(`已將「${c.name}」加入主畫面`);
+};
+
+/* ================= extension bridge ================= */
+const ext = {ready:false, version:null};
+/* iPhones have no visible scrollbar. When we can't hide it from inside the page (no helper extension,
+   cross-origin), make the iframe one scrollbar wider so the desktop scrollbar sits outside the screen. */
+const SCROLLBAR_W = (() => { const d = document.createElement('div'); d.style.cssText = 'position:absolute;top:-999px;width:100px;height:100px;overflow:scroll'; document.body.appendChild(d); const w = d.offsetWidth - d.clientWidth; d.remove(); return w; })();
+function fitFrame(){
+  const clip = SCROLLBAR_W > 0 && !ext.ready && !sameDoc;
+  el.frame.style.width = clip ? `calc(100% + ${SCROLLBAR_W}px)` : '100%';
+}
+function updateExtUI(){
+  fitFrame();
+  $('#extChip').classList.toggle('ok', ext.ready);
+  $('#extText').textContent = ext.ready ? '擴充已連線' : '未安裝輔助擴充';
+  $('#extSub').classList.toggle('ok', ext.ready);
+  $('#extSub span:last-child').textContent = ext.ready ? '輔助擴充已啟用' : '以下功能需要輔助擴充';
+  $$('.toggle.ext').forEach(t => t.classList.toggle('dis', !ext.ready));
+}
+$('#extChip').onclick = () => openHelp(ext.ready ? 'tips' : 'ext');
+function sendCfg(){
+  const w = el.frame.contentWindow; if (!w) return;
+  try { w.postMessage({type:'mp:cfg', hideCursor: state.finger.on && !state.finger.present, dragScroll: state.finger.dragScroll, hideScrollbar: state.finger.hideScrollbar}, '*'); } catch {}
+  if (sameDoc) applySameOriginCfg();
+}
+window.addEventListener('message', e => {
+  const d = e.data; if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
+  if (e.source === window){
+    if (d.type === 'mp:ext-ready' && !ext.ready){ ext.ready = true; ext.version = d.version; updateExtUI(); extReadyResolve(); }
+    else if (d.type === 'mp:sync-load') onSyncLoad(d.payload);
+    else if (d.type === 'mp:sync-saved'){ syncInfo.last = Date.now(); updateSyncUI(); }
+    return;
+  }
+  if (e.source !== el.frame.contentWindow) return;
+  switch (d.type){
+    case 'mp:hello': gotHello = true; el.blocked.hidden = true; sendCfg(); if (d.href) onFrameNav(d.href); readyResolve?.(); break;
+    case 'mp:ptr':   framePtr(d); break;
+    case 'mp:nav':   onFrameNav(d.href); break;
+    case 'mp:theme': if (view === 'app' && el.sfStart.hidden) setTint(d.top, d.bottom); break;
+    case 'mp:meta':  pageMeta = {title:String(d.title || '').slice(0,80), appTitle:String(d.appTitle || '').slice(0,30), icon:/^https?:/.test(d.icon || '') ? d.icon : null}; break;
+  }
+});
+function onFrameNav(href){
+  if (!href || /^about:/.test(href) || href === curUrl) return;
+  curUrl = href;
+  if (el.frame.dataset.owner === 'safari'){ state.safariUrl = href; save(); }
+  setAddress(href);
+}
+let extReadyResolve; const extReadyP = new Promise(r => extReadyResolve = r);
+function ping(){ window.postMessage({type:'mp:tool-ping'}, '*'); }
+ping(); setTimeout(ping, 250); setTimeout(ping, 1000);
+function attachSameOrigin(){
+  sameDoc = null;
+  let doc; try { doc = el.frame.contentDocument; } catch { doc = null; }
+  if (!doc || !doc.documentElement || doc.URL === 'about:blank') return;
+  sameDoc = doc;
+  const opt = {capture:true, passive:true};
+  doc.addEventListener('pointermove', e => framePtr({t:'move', x:e.clientX, y:e.clientY, b:e.buttons}), opt);
+  doc.addEventListener('pointerdown', e => { if (e.button === 0) framePtr({t:'down', x:e.clientX, y:e.clientY}); }, opt);
+  doc.addEventListener('pointerup', e => framePtr({t:'up', x:e.clientX, y:e.clientY}), opt);
+  doc.documentElement.addEventListener('mouseleave', () => framePtr({t:'leave'}));
+  applySameOriginCfg();
+  const icon = doc.querySelector('link[rel~="apple-touch-icon"]');
+  pageMeta = {title: doc.title, appTitle: doc.querySelector('meta[name="apple-mobile-web-app-title"]')?.content || '', icon: icon ? icon.href : null};
+  const win = el.frame.contentWindow, bgAt = (x, y) => {
+    for (let n = doc.elementFromPoint(x, y); n && n.nodeType === 1; n = n.parentElement){ const c = win.getComputedStyle(n).backgroundColor; if (parseColor(c)[3] > .5) return c; }
+    return '#ffffff';
+  };
+  const theme = () => { if (view === 'app' && el.sfStart.hidden) setTint(bgAt(win.innerWidth/2, 1), bgAt(win.innerWidth/2, win.innerHeight - 2)); };
+  sameTheme = theme;
+  applySchemeSameOrigin();
+  theme(); doc.addEventListener('scroll', () => { clearTimeout(theme.t); theme.t = setTimeout(theme, 200); }, opt);
+  onFrameNav(doc.URL);
+}
+let sameTheme = null;
+/* prefers-color-scheme emulation for same-origin pages (the helper extension does the same for any site) */
+function applySchemeSameOrigin(){
+  const doc = sameDoc; if (!doc) return;
+  const scheme = state.iosDark ? 'dark' : 'light', RE = /\(\s*prefers-color-scheme\s*:\s*(dark|light)\s*\)/gi;
+  const orig = doc.__mpOrig || (doc.__mpOrig = new WeakMap());
+  const rw = t => t.replace(RE, (m, v) => v.toLowerCase() === scheme ? '(min-width: 0px)' : '(max-width: -1px)');
+  const fix = (key, get, set) => { if (!orig.has(key)){ const t = get(); if (!t || !/prefers-color-scheme/i.test(t)) return; orig.set(key, t); } const w = rw(orig.get(key)); if (get() !== w) set(w); };
+  const walk = rules => { for (const r of rules || []){ if (r.media && r.type === CSSRule.MEDIA_RULE) fix(r, () => r.media.mediaText, v => r.media.mediaText = v); if (r.cssRules) walk(r.cssRules); } };
+  try { for (const s of doc.styleSheets){ try { walk(s.cssRules); } catch {} } } catch {}
+  doc.querySelectorAll('link[media],style[media],source[media]').forEach(n => fix(n, () => n.getAttribute('media'), v => n.setAttribute('media', v)));
+  setTimeout(() => sameTheme && sameTheme(), 60);
+}
+function applyIosDark(announce){
+  const dark = !!state.iosDark;
+  el.screen.classList.toggle('ios-dark', dark);
+  el.frame.name = '__mp_device__' + (dark ? ':dark' : '');
+  try { el.frame.contentWindow.postMessage({type:'mp:scheme', scheme: dark ? 'dark' : 'light'}, '*'); } catch {}
+  applySchemeSameOrigin();
+  if (!el.sfStart.hidden) setTint(dark ? '#000000' : '#f2f2f7', dark ? '#000000' : '#f2f2f7');
+  $('#btnDark').classList.toggle('on', dark);
+  if (announce){
+    const pageOk = ext.ready || !!sameDoc || !curUrl;
+    toast(`iOS ${dark ? '深色' : '淺色'}模式` + (pageOk ? '' : ' · 網頁內容的深色樣式需要輔助擴充'), pageOk ? 1400 : 3200);
+  }
+}
+function toggleIosDark(){ state.iosDark = !state.iosDark; save(); applyIosDark(true); }
+function applySameOriginCfg(){
+  try {
+    let s = sameDoc.getElementById('__mp_style');
+    if (!s){ s = sameDoc.createElement('style'); s.id = '__mp_style'; sameDoc.documentElement.appendChild(s); }
+    s.textContent = (state.finger.on && !state.finger.present ? 'html,html *{cursor:none!important}' : '') + (state.finger.hideScrollbar ? '*{scrollbar-width:none!important}' : '');
+  } catch {}
+}
+
+/* ================= touch visuals ================= */
+const trailCtx = el.trail.getContext('2d');
+const touch = {x:0, y:0, down:false, shown:false, sx:0, sy:0, moved:false, src:null};
+const lp = {timer:0, done:0, node:null};
+const trail = {pts:[], raf:0};
+let fingerHideTimer = 0;
+const tracking = () => ext.ready || !!sameDoc;
+function applyFingerUI(){
+  const f = state.finger, acc = ACCENTS[f.accent];
+  el.touch.style.setProperty('--accent', acc);
+  el.touch.style.setProperty('--accent-rgb', parseColor(acc).slice(0,3).join(','));
+  el.finger.classList.toggle('dot', f.style === 'dot');
+  el.finger.classList.toggle('left', f.hand === 'left');
+  el.screen.classList.toggle('finger-on', f.on);
+  el.screen.classList.toggle('present', f.on && f.present);
+  if (!f.on) hideFinger();
+  sendCfg();
+}
+function showFinger(){ if (!touch.shown){ touch.shown = true; el.finger.classList.add('show'); } }
+function hideFinger(){ touch.shown = false; el.finger.classList.remove('show'); }
+function ptrMove(x, y, src){
+  if (!state.finger.on) return;
+  clearTimeout(fingerHideTimer);
+  touch.x = x; touch.y = y; touch.src = src;
+  el.finger.style.transform = `translate(${x}px,${y}px)`; showFinger();
+  if (touch.down){
+    if (Math.hypot(x - touch.sx, y - touch.sy) > 8){ touch.moved = true; clearLP(); }
+    if (state.finger.trail && touch.moved) addTrail(x, y, false);
+  }
+}
+function ptrDown(x, y, src){
+  if (!state.finger.on) return;
+  ptrMove(x, y, src);
+  touch.down = true; touch.sx = x; touch.sy = y; touch.moved = false;
+  el.finger.classList.add('down');
+  if (state.finger.ripple) spawnRipple(x, y);
+  if (state.finger.trail) addTrail(x, y, true);
+  startLP(x, y); click();
+}
+function ptrUp(){ if (!touch.down) return; touch.down = false; el.finger.classList.remove('down'); clearLP(); }
+function ptrLeave(){ ptrUp(); fingerHideTimer = setTimeout(hideFinger, 30); }
+function framePtr(d){
+  if (view !== 'app') return;
+  const x = (d.x || 0) + el.content.offsetLeft, y = (d.y || 0) + el.content.offsetTop;
+  switch (d.t){
+    case 'move': ptrMove(x, y, 'frame'); if (touch.down && d.b === 0) ptrUp(); break;
+    case 'down': ptrDown(x, y, 'frame'); break;
+    case 'up': ptrUp(); break;
+    case 'leave': ptrLeave(); break;
+  }
+}
+function local(e){ const r = el.screen.getBoundingClientRect(), s = r.width / geo.W; return [(e.clientX - r.left)/s, (e.clientY - r.top)/s]; }
+el.screen.addEventListener('pointermove', e => { if (e.target === el.frame) return; const [x,y] = local(e); ptrMove(x, y, 'parent'); });
+el.screen.addEventListener('pointerdown', e => { if (e.button !== 0 || e.target === el.frame) return; const [x,y] = local(e); ptrDown(x, y, 'parent'); });
+window.addEventListener('pointerup', () => { if (touch.src === 'parent') ptrUp(); });
+el.screen.addEventListener('pointerleave', ptrLeave);
+el.frame.addEventListener('pointerenter', () => { if (!tracking()) hideFinger(); });
+window.addEventListener('blur', () => closePops());
+function spawnRipple(x, y){ const n = document.createElement('div'); n.className = 'ripple'; n.style.transform = `translate(${x}px,${y}px)`; el.touch.appendChild(n); setTimeout(() => n.remove(), 700); }
+function startLP(x, y){
+  clearLP(); if (!state.finger.longpress) return;
+  lp.timer = setTimeout(() => {
+    const n = document.createElement('div'); n.className = 'lp'; n.style.transform = `translate(${x}px,${y}px)`;
+    n.innerHTML = '<svg viewBox="-30 -30 60 60"><circle class="lp-track" r="24"/><circle class="lp-bar" r="24"/></svg>';
+    el.touch.appendChild(n); lp.node = n;
+    lp.done = setTimeout(() => { n.classList.add('done'); haptic(); click(true); }, 450);
+  }, 220);
+}
+function clearLP(){ clearTimeout(lp.timer); clearTimeout(lp.done); if (lp.node){ const n = lp.node; lp.node = null; n.classList.add('out'); setTimeout(() => n.remove(), 260); } }
+function addTrail(x, y, brk){ trail.pts.push({x, y, t:performance.now(), brk}); if (!trail.raf) trail.raf = requestAnimationFrame(drawTrail); }
+function drawTrail(){
+  trail.raf = 0;
+  const now = performance.now(), LIFE = 450, ctx = trailCtx;
+  trail.pts = trail.pts.filter(p => now - p.t < LIFE);
+  ctx.clearRect(0, 0, geo.W, geo.H);
+  const rgb = parseColor(ACCENTS[state.finger.accent]).slice(0,3).join(',');
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (let i = 1; i < trail.pts.length; i++){
+    const a = trail.pts[i-1], b = trail.pts[i]; if (b.brk) continue;
+    const k = 1 - (now - b.t) / LIFE;
+    ctx.strokeStyle = `rgba(0,0,0,${k*.18})`; ctx.lineWidth = 3 + k*13; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.strokeStyle = `rgba(${rgb},${k*.6})`; ctx.lineWidth = 2 + k*10; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  if (trail.pts.length) trail.raf = requestAnimationFrame(drawTrail);
+}
+let actx;
+function click(heavy){
+  if (!state.finger.sound) return;
+  try {
+    actx = actx || new AudioContext(); if (actx.state === 'suspended') actx.resume();
+    const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(heavy ? 900 : 1700, t); o.frequency.exponentialRampToValueAtTime(heavy ? 300 : 650, t + .05);
+    g.gain.setValueAtTime(heavy ? .18 : .1, t); g.gain.exponentialRampToValueAtTime(.0001, t + .07);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + .08);
+  } catch {}
+}
+
+/* ================= tool popovers ================= */
+function closePops(){ $$('.pop.open').forEach(p => p.classList.remove('open')); document.body.classList.remove('pop-open'); }
+$$('[data-pop]').forEach(b => b.addEventListener('click', e => {
+  e.stopPropagation();
+  const p = document.getElementById(b.dataset.pop), was = p.classList.contains('open');
+  closePops(); if (!was){ p.classList.add('open'); document.body.classList.add('pop-open'); }
+}));
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.pop') && !e.target.closest('[data-pop]')) closePops(); });
+function buildPopovers(){
+  const list = $('#devList'); list.innerHTML = '';
+  Object.entries(DEVICES).forEach(([k, d], i) => {
+    const b = document.createElement('button'); b.className = 'dev-item'; b.dataset.k = k;
+    const gh = 22 * d.h / 956, gw = gh * d.w / d.h;
+    b.innerHTML = `<span class="dev-glyph" style="width:${gw.toFixed(1)}px;height:${gh.toFixed(1)}px"></span><span><div class="dev-name">${d.name}</div><div class="dev-meta">${d.w} × ${d.h} pt · 快捷鍵 ${i+1}</div></span><svg class="i check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+    b.onclick = () => setDevice(k); list.appendChild(b);
+  });
+  const fl = $('#finishList'); fl.innerHTML = '';
+  for (const [k, f] of Object.entries(FINISHES)){
+    const b = document.createElement('button'); b.className = 'sw-c'; b.dataset.k = k; b.title = f.name;
+    b.style.background = `linear-gradient(135deg,${f.hi},${f.base} 45%,${f.lo})`;
+    b.onclick = () => { state.finish = k; applyFinish(); save(); syncUI(); }; fl.appendChild(b);
+  }
+  const al = $('#accentList'); al.innerHTML = '';
+  for (const [k, c] of Object.entries(ACCENTS)){
+    const b = document.createElement('button'); b.className = 'sw-c'; b.dataset.k = k; b.style.background = c; b.title = k;
+    b.onclick = () => { state.finger.accent = k; applyFingerUI(); save(); syncUI(); }; al.appendChild(b);
+  }
+}
+function setDevice(k){
+  if (!DEVICES[k] || k === state.device) return;
+  state.device = k; el.scaler.classList.remove('instant'); layout(); save(); syncUI();
+  setTimeout(() => el.scaler.classList.add('instant'), 400);
+}
+function setMode(m){ state.mode = m; layout(); save(); syncUI(); if (view === 'home') toast(`網頁會以「${({safari:'Safari', app:'Web App', full:'全螢幕'})[m]}」模式顯示`); }
+function syncUI(){
+  $$('#devList .dev-item').forEach(b => b.classList.toggle('on', b.dataset.k === state.device));
+  $$('#finishList .sw-c').forEach(b => b.classList.toggle('on', b.dataset.k === state.finish));
+  $$('#accentList .sw-c').forEach(b => b.classList.toggle('on', b.dataset.k === state.finger.accent));
+  $$('#segMode button').forEach(b => b.classList.toggle('on', b.dataset.v === state.mode));
+  $$('#segStyle button').forEach(b => b.classList.toggle('on', b.dataset.v === state.finger.style));
+  $$('#segHand button').forEach(b => b.classList.toggle('on', b.dataset.v === state.finger.hand));
+  $$('.toggle[data-key]').forEach(t => t.classList.toggle('on', !!state.finger[t.dataset.key]));
+  $('#fingerSplit').classList.toggle('on', state.finger.on);
+}
+$$('#segMode button').forEach(b => b.onclick = () => setMode(b.dataset.v));
+$$('#segStyle button').forEach(b => b.onclick = () => { state.finger.style = b.dataset.v; applyFingerUI(); save(); syncUI(); });
+$$('#segHand button').forEach(b => b.onclick = () => { state.finger.hand = b.dataset.v; applyFingerUI(); save(); syncUI(); });
+$$('.toggle[data-key]').forEach(t => t.addEventListener('click', e => {
+  e.preventDefault();
+  const k = t.dataset.key;
+  if (t.classList.contains('ext') && !ext.ready){ toast('這個功能需要先安裝輔助擴充'); return; }
+  state.finger[k] = !state.finger[k];
+  if (k === 'present' && state.finger.present) state.finger.on = true;
+  if (k === 'sound' && state.finger.sound) click();
+  applyFingerUI(); save(); syncUI();
+  if (k === 'present') toast(state.finger.present ? '簡報模式：只展示手指，不會操作網頁' : '已回到一般操作模式');
+}));
+function toggleFinger(){ state.finger.on = !state.finger.on; if (!state.finger.on) state.finger.present = false; applyFingerUI(); save(); syncUI(); toast(state.finger.on ? '手指指標：開' : '手指指標：關', 1200); }
+$('#btnFinger').onclick = toggleFinger;
+$('#btnRotate').onclick = rotate;
+$('#zoomIn').onclick = () => setZoom(scale + .1);
+$('#zoomOut').onclick = () => setZoom(scale - .1);
+$('#zoomVal').onclick = () => setZoom(state.zoom === 'fit' ? 1 : 'fit');
+el.viewport.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); setZoom(scale * (e.deltaY < 0 ? 1.08 : 1/1.08)); }, {passive:false});
+
+/* URL bar */
+$('#urlForm').addEventListener('submit', e => { e.preventDefault(); const sel = el.recents.querySelector('.r-item.sel'); navigate(sel ? sel.dataset.url : el.urlInput.value); el.urlInput.blur(); closeRecents(); });
+el.urlInput.addEventListener('focus', () => { el.urlInput.select(); openRecents(); $('#urlKbd').hidden = true; });
+// Restore the address only after a short delay: clicking "前往" blurs the input before the form submits.
+el.urlInput.addEventListener('blur', () => {
+  $('#urlKbd').hidden = false;
+  setTimeout(() => { closeRecents(); if (document.activeElement !== el.urlInput) el.urlInput.value = view === 'app' && curUrl ? curUrl : ''; }, 250);
+});
+el.urlInput.addEventListener('input', openRecents);
+el.urlInput.addEventListener('keydown', e => {
+  const items = [...el.recents.querySelectorAll('.r-item')];
+  if (e.key === 'Escape'){ el.urlInput.blur(); return; }
+  if (!items.length || !['ArrowDown','ArrowUp'].includes(e.key)) return;
+  e.preventDefault();
+  let i = items.findIndex(x => x.classList.contains('sel')); items.forEach(x => x.classList.remove('sel'));
+  i = e.key === 'ArrowDown' ? (i + 1) % items.length : (i <= 0 ? items.length - 1 : i - 1); items[i].classList.add('sel');
+});
+function openRecents(){
+  const q = el.urlInput.value.trim().toLowerCase();
+  const list = state.recents.filter(u => !q || q === (curUrl || '').toLowerCase() || u.toLowerCase().includes(q)).slice(0, 8);
+  if (!list.length){ closeRecents(); return; }
+  el.recents.innerHTML = `<div class="recents-h"><span>最近瀏覽</span><button type="button" data-clear>清除全部</button></div>` + list.map(() =>
+    `<div class="r-item"><div class="r-av"></div><div class="r-txt"><div class="r-host"></div><div class="r-path"></div></div><button type="button" class="r-del" title="移除"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('');
+  [...el.recents.querySelectorAll('.r-item')].forEach((n, i) => {
+    const u = list[i], host = hostOf(u); n.dataset.url = u;
+    const av = n.querySelector('.r-av'); av.style.background = colorFor(host); av.textContent = (host[0] || '?').toUpperCase();
+    n.querySelector('.r-host').textContent = host;
+    let p = ''; try { const x = new URL(u); p = (x.pathname + x.search).replace(/^\/$/, ''); } catch {}
+    n.querySelector('.r-path').textContent = p || u;
+    n.addEventListener('mousedown', e => {
+      e.preventDefault();
+      if (e.target.closest('.r-del')){ state.recents = state.recents.filter(x => x !== u); save(); openRecents(); return; }
+      navigate(u); el.urlInput.blur();
+    });
+  });
+  el.recents.querySelector('[data-clear]').addEventListener('mousedown', e => { e.preventDefault(); state.recents = []; save(); closeRecents(); });
+  el.recents.hidden = false;
+}
+function closeRecents(){ el.recents.hidden = true; }
+
+/* help */
+function openHelp(tab){
+  closePops();
+  $$('#helpTabs button').forEach(b => b.classList.toggle('on', b.dataset.v === tab));
+  $$('.dlg-b section').forEach(s => s.hidden = s.dataset.tab !== tab);
+  if (!el.help.open) el.help.showModal();
+}
+$$('#helpTabs button').forEach(b => b.onclick = () => openHelp(b.dataset.v));
+$('#btnHelp').onclick = () => openHelp('tips');
+$('#helpClose').onclick = () => el.help.close();
+el.help.addEventListener('click', e => { if (e.target === el.help) el.help.close(); });
+
+/* ================= capture ================= */
+async function captureStream(){
+  if (!navigator.mediaDevices?.getDisplayMedia) throw new Error('此瀏覽器不支援畫面擷取');
+  closePops(); hideFinger();
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video:{displaySurface:'browser', frameRate:{ideal:60}, width:{ideal:3840}, height:{ideal:2160}}, audio:false,
+    preferCurrentTab:true, selfBrowserSurface:'include', surfaceSwitching:'exclude', monitorTypeSurfaces:'exclude',
+  });
+  const [track] = stream.getVideoTracks();
+  let restricted = false;
+  try { if (window.RestrictionTarget && track.restrictTo){ await track.restrictTo(await RestrictionTarget.fromElement(el.shell)); restricted = true; } } catch {}
+  if (!restricted){
+    try { if (window.CropTarget && track.cropTo) await track.cropTo(await CropTarget.fromElement(el.shell)); }
+    catch { toast('無法裁切到手機區域，將擷取整個分頁'); }
+  }
+  return {stream, track};
+}
+async function screenshot(){
+  let cap;
+  try { cap = await captureStream(); } catch (e){ if (e.name !== 'NotAllowedError') toast(e.message || '截圖失敗'); return; }
+  try {
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = cap.stream; await v.play();
+    await new Promise(r => { let n = 0; const step = () => (++n >= 4 ? r() : v.requestVideoFrameCallback(step)); if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(step); setTimeout(r, 1200); });
+    const w = v.videoWidth, h = v.videoHeight, c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d'), sr = el.shell.getBoundingClientRect(), k = w / sr.width, dr = el.device.getBoundingClientRect(), path = new Path2D();
+    path.roundRect((dr.left - sr.left)*k, (dr.top - sr.top)*k, dr.width*k, dr.height*k, geo.outerR*scale*k);
+    for (const b of el.buttons.children){ const r = b.getBoundingClientRect(); path.rect((r.left - sr.left)*k, (r.top - sr.top)*k, r.width*k, r.height*k); }
+    if (Math.abs(w/h - sr.width/sr.height) < .02) ctx.clip(path);
+    ctx.drawImage(v, 0, 0, w, h);
+    c.toBlob(b => { download(b, `mobile-preview_${hostOf(curUrl) || 'home'}_${stamp()}.png`); toast(`已儲存截圖 · ${w}×${h}`); }, 'image/png');
+  } finally { cap.stream.getTracks().forEach(t => t.stop()); }
+}
+const rec = {mr:null, chunks:[], t0:0, timer:0, mime:''};
+async function toggleRecord(){
+  if (rec.mr){ rec.mr.stop(); return; }
+  if (!window.MediaRecorder){ toast('此瀏覽器不支援錄影'); return; }
+  let cap;
+  try { cap = await captureStream(); } catch (e){ if (e.name !== 'NotAllowedError') toast(e.message || '無法開始錄影'); return; }
+  rec.mime = ['video/mp4;codecs=avc1.640028','video/mp4','video/webm;codecs=vp9','video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  rec.chunks = [];
+  const mr = new MediaRecorder(cap.stream, rec.mime ? {mimeType:rec.mime, videoBitsPerSecond:12e6} : undefined);
+  rec.mr = mr;
+  mr.ondataavailable = e => e.data.size && rec.chunks.push(e.data);
+  mr.onstop = () => {
+    cap.stream.getTracks().forEach(t => t.stop());
+    const type = mr.mimeType || rec.mime || 'video/webm', fx = type.includes('mp4') ? 'mp4' : 'webm';
+    download(new Blob(rec.chunks, {type}), `mobile-preview_${hostOf(curUrl) || 'home'}_${stamp()}.${fx}`);
+    rec.mr = null; clearInterval(rec.timer);
+    $('#recPill').hidden = true; $('#btnRec').classList.remove('live'); $('#recLbl').textContent = '錄影';
+    toast(`已儲存錄影（${fx.toUpperCase()}）`);
+  };
+  cap.track.addEventListener('ended', () => { if (rec.mr && rec.mr.state !== 'inactive') rec.mr.stop(); });
+  mr.start(250); rec.t0 = Date.now();
+  $('#recPill').hidden = false; $('#btnRec').classList.add('live'); $('#recLbl').textContent = '停止';
+  const upd = () => { const s = Math.floor((Date.now() - rec.t0)/1000); $('#recTime').textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; };
+  upd(); rec.timer = setInterval(upd, 500);
+}
+$('#btnShot').onclick = screenshot; $('#btnRec').onclick = toggleRecord; $('#recStop').onclick = toggleRecord;
+
+/* ================= keyboard & paste ================= */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l'){ e.preventDefault(); focusUrl(); return; }
+  if (e.altKey && e.key === 'ArrowLeft'){ e.preventDefault(); goBack(); return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || e.ctrlKey || e.metaKey || e.altKey || el.help.open) return;
+  const k = e.key;
+  if (k === 'Escape'){ closePops(); closeSheets(); setJiggle(false); return; }
+  if (k === '/'){ e.preventDefault(); focusUrl(); return; }
+  const map = {
+    h: () => goHome(), r: rotate, f: toggleFinger, c: screenshot, v: toggleRecord, d: toggleIosDark,
+    m: () => setMode({safari:'app', app:'full', full:'safari'}[state.mode]),
+    t: () => $('#btnTheme').click(), '?': () => openHelp('keys'),
+    '+': () => setZoom(scale + .1), '=': () => setZoom(scale + .1), '-': () => setZoom(scale - .1), '0': () => setZoom(state.zoom === 'fit' ? 1 : 'fit'),
+  };
+  const keys = Object.keys(DEVICES);
+  if (/^[1-9]$/.test(k) && keys[+k - 1]){ setDevice(keys[+k - 1]); return; }
+  const fn = map[k.toLowerCase()] || map[k];
+  if (fn){ e.preventDefault(); fn(); }
+});
+document.addEventListener('paste', e => {
+  if ((e.target.tagName || '').toLowerCase() === 'input') return;
+  const t = (e.clipboardData?.getData('text') || '').trim();
+  if (t && !/\s/.test(t) && /[.:]/.test(t)){ e.preventDefault(); navigate(t); }
+});
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (!state.theme) applyTheme(); });
+
+/* ================= boot ================= */
+applyTheme(); applyFinish(); buildPopovers(); renderHome(); layout(); applyFingerUI(); syncUI(); updateExtUI(); tick(); updateChrome(); applyIosDark(false); updateSyncUI();
+$('#btnDark').onclick = toggleIosDark;
+if (initialUrl){
+  Promise.race([extReadyP, wait(450)]).then(() => openApp('safari', 'safari', null, {url:initialUrl, instant:true}));
+}
+requestAnimationFrame(() => el.scaler.classList.add('instant'));
+})();
+</script>
+</body>
+</html>
