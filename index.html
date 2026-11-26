@@ -915,6 +915,22 @@ function renderHome(){
     GRID_APPS.map(appBtn).join('') +
     state.clips.map(c => `<button class="app clip" data-clip="${esc(c.id)}">${clipIconHTML(c)}<span>${esc(c.name)}</span><i class="del" data-del="${esc(c.id)}">−</i></button>`).join('');
   el.hsDock.innerHTML = DOCK_APPS.map(appBtn).join('');
+  healClipIcons();
+}
+// Home-screen sites saved without an icon (e.g. added before icon lookup existed) try once per session to fetch it.
+const iconTried = new Set();
+function healClipIcons(){
+  for (const c of state.clips){
+    if (c.icon || iconTried.has(c.id)) continue;
+    iconTried.add(c.id);
+    fetchSiteMeta(c.url).then(m => {
+      const cur = state.clips.find(x => x.id === c.id);
+      if (!m.icon || !cur || cur.icon) return;
+      cur.icon = m.icon; save();
+      const node = el.hsGrid.querySelector(`[data-clip="${CSS.escape(c.id)}"] .ic`);
+      if (node) node.outerHTML = clipIconHTML(cur);
+    });
+  }
 }
 let jiggle = false;
 function setJiggle(on){ jiggle = on; el.home.classList.toggle('jiggle', on); $('#hsDone').hidden = !on; }
@@ -1400,10 +1416,12 @@ function attachSameOrigin(){
   if (!doc || !doc.documentElement || doc.URL === 'about:blank') return;
   sameDoc = doc;
   const opt = {capture:true, passive:true};
-  doc.addEventListener('pointermove', e => framePtr({t:'move', x:e.clientX, y:e.clientY, b:e.buttons}), opt);
-  doc.addEventListener('pointerdown', e => { if (e.button === 0) framePtr({t:'down', x:e.clientX, y:e.clientY}); }, opt);
-  doc.addEventListener('pointerup', e => framePtr({t:'up', x:e.clientX, y:e.clientY}), opt);
-  doc.documentElement.addEventListener('mouseleave', () => framePtr({t:'leave'}));
+  // When the helper extension is connected it already reports the pointer; don't double up.
+  const own = d => { if (!ext.ready) framePtr(d); };
+  doc.addEventListener('pointermove', e => own({t:'move', x:e.clientX, y:e.clientY, b:e.buttons}), opt);
+  doc.addEventListener('pointerdown', e => { if (e.button === 0) own({t:'down', x:e.clientX, y:e.clientY}); }, opt);
+  doc.addEventListener('pointerup', e => own({t:'up', x:e.clientX, y:e.clientY}), opt);
+  doc.documentElement.addEventListener('mouseleave', () => own({t:'leave'}));
   applySameOriginCfg();
   const icon = doc.querySelector('link[rel~="apple-touch-icon"]');
   pageMeta = {title: doc.title, appTitle: doc.querySelector('meta[name="apple-mobile-web-app-title"]')?.content || '', icon: icon ? icon.href : null};

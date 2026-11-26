@@ -9,6 +9,8 @@ function isToolUrl(url) {
   try {
     const u = new URL(url);
     if (u.protocol === 'file:') return true;
+    // the published copy on GitHub Pages
+    if (u.protocol === 'https:' && u.hostname === 'jimmywu-commits.github.io' && /^\/iphone(\/|$)/.test(u.pathname)) return true;
     return (u.protocol === 'http:' || u.protocol === 'https:') &&
       (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]' || u.hostname.endsWith('.localhost'));
   } catch { return false; }
