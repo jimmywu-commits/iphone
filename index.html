@@ -1281,7 +1281,11 @@ function closeSheets(keepDim){
 el.dim.onclick = () => closeSheets();
 $$('[data-close]').forEach(b => b.onclick = () => closeSheets());
 function cleanTitle(t){ return (t || '').split(/\s+[|\-–—·:]\s+/)[0].trim().slice(0, 24); }
-function probeImg(src){ return new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth >= 48); i.onerror = () => r(false); i.src = src; setTimeout(() => r(false), 2500); }); }
+function probeImg(src, min = 48){ return new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth >= min); i.onerror = () => r(false); i.src = src; setTimeout(() => r(false), 3000); }); }
+// Where sites usually keep their home-screen icon (used when the page itself can't be read cross-origin).
+const ICON_GUESSES = ['apple-touch-icon.png', '/apple-touch-icon.png', '/apple-touch-icon-precomposed.png',
+  '/favicons/apple-touch-icon.png', '/favicon/apple-touch-icon.png', '/icons/apple-touch-icon.png',
+  '/assets/apple-touch-icon.png', '/static/apple-touch-icon.png', '/images/apple-touch-icon.png', '/img/apple-touch-icon.png'];
 
 /* Read a site's home-screen icon + name the way iOS does:
    apple-touch-icon → apple-mobile-web-app-title → manifest (short_name / icons) → large favicon → apple-touch-icon.png guesses.
@@ -1321,9 +1325,17 @@ function fetchSiteMeta(url){
       }
     } catch {}
     if (!out.icon){
-      for (const g of ['apple-touch-icon.png', '/apple-touch-icon.png']){
-        try { const u = new URL(g, url).href; if (await probeImg(u)){ out.icon = u; break; } } catch {}
-      }
+      // try the usual locations in parallel, keep the first one (in priority order) that is a real image
+      const cands = [...new Set(ICON_GUESSES.map(g => { try { return new URL(g, url).href; } catch { return ''; } }).filter(Boolean))];
+      const ok = await Promise.all(cands.map(u => probeImg(u)));
+      const hit = ok.indexOf(true); if (hit >= 0) out.icon = cands[hit];
+    }
+    if (!out.icon){
+      // last resort: Google's site-icon service (only accept a large icon, so a blurry favicon falls back to the letter icon)
+      try {
+        const g = 'https://www.google.com/s2/favicons?sz=256&domain_url=' + encodeURIComponent(new URL(url).origin);
+        if (await probeImg(g, 96)) out.icon = g;
+      } catch {}
     }
     return out;
   })();
