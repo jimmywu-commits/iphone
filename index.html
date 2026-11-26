@@ -587,7 +587,7 @@ dialog[open]{animation:dlg .22s cubic-bezier(.2,.8,.3,1)}
         <div class="pop-title">裝置</div><div id="devList"></div>
         <div class="pop-title">機身顏色</div><div class="swatches" id="finishList"></div>
         <div class="divider" style="margin-top:14px"></div>
-        <button class="row toggle" id="resetHome" style="width:100%;text-align:left"><span>重設主畫面<small>移除所有加入主畫面的網站</small></span><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+        <button class="row toggle" id="resetHome" style="width:100%;text-align:left"><span>重設主畫面<small>回到預設，只留下預設的 App</small></span><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
         <div class="pop-title">資料與同步</div>
         <div class="sync-line" id="syncLine"><span class="dot"></span><span id="syncText">未同步</span></div>
         <div class="pbtns">
@@ -745,14 +745,33 @@ const store = {
   get(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch { return null; } },
   set(v){ try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch {} },
 };
+/* ===== 預設主畫面 =====
+   任何裝置第一次打開（不用登入）就會出現在主畫面上的 App。要增減就改這裡。
+   每個預設 App 只會自動加入一次：使用者自己刪掉後，不會再冒出來。 */
+const PRESET_CLIPS = [
+  {id:'preset-evday', url:'https://jimmywu-commits.github.io/evday/', name:'蛋白質', icon:'https://jimmywu-commits.github.io/evday/apple-touch-icon.png', web:true},
+];
 const DEFAULTS = {
   device:'iphone18pro', finish:'silver', orient:'portrait', mode:'safari', zoom:'fit', theme:null, safariUrl:'', iosDark:false,
   finger:{on:true, style:'finger', hand:'right', accent:'white', ripple:true, trail:true, longpress:true, sound:false, dragScroll:true, hideScrollbar:true, present:false},
-  recents:[], clips:[],
+  recents:[], clips:[], presetsSeen:[],
 };
 const saved = store.get() || {};
 const state = {...DEFAULTS, ...saved, finger:{...DEFAULTS.finger, ...(saved.finger || {})},
-  recents:Array.isArray(saved.recents) ? saved.recents : [], clips:Array.isArray(saved.clips) ? saved.clips : []};
+  recents:Array.isArray(saved.recents) ? saved.recents : [], clips:Array.isArray(saved.clips) ? saved.clips : [],
+  presetsSeen:Array.isArray(saved.presetsSeen) ? saved.presetsSeen : []};
+function applyPresets(){
+  let changed = false;
+  PRESET_CLIPS.slice().reverse().forEach(p => {
+    if (state.presetsSeen.includes(p.id)) return;
+    state.presetsSeen.push(p.id); changed = true;
+    const norm = u => (u || '').replace(/\/+$/, '');
+    if (!state.clips.some(c => norm(c.url) === norm(p.url))) state.clips.unshift({...p});
+  });
+  if (changed) store.set(state);
+  return changed;
+}
+applyPresets();
 state.finger.present = false;
 if (!DEVICES[state.device]) state.device = DEFAULTS.device;
 if (!FINISHES[state.finish]) state.finish = DEFAULTS.finish;
@@ -762,7 +781,7 @@ if (DEVICES[qp.get('device')]) state.device = qp.get('device');
 if (['portrait','landscape'].includes(qp.get('orient'))) state.orient = qp.get('orient');
 const initialUrl = qp.get('url') || '';
 /* Settings + home screen that follow you across devices (Chrome sync via the helper extension, or export/import). */
-const SYNC_KEYS = ['device','finish','orient','mode','zoom','theme','iosDark','safariUrl','finger','recents','clips'];
+const SYNC_KEYS = ['device','finish','orient','mode','zoom','theme','iosDark','safariUrl','finger','recents','clips','presetsSeen'];
 const pickSync = s => { const o = {}; for (const k of SYNC_KEYS) o[k] = s[k]; o.finger = {...s.finger, present:false}; return o; };
 const syncInfo = {on:false, last:0};
 function save(){
@@ -1186,13 +1205,16 @@ function cleanData(d){
     .filter(c => c && typeof c.id === 'string' && httpUrl(c.url))
     .map(c => ({id:c.id.slice(0, 40), url:httpUrl(c.url), name:String(c.name || hostOf(c.url)).slice(0, 30), icon:httpUrl(c.icon) || null, web:c.web !== false}))
     .slice(0, 60);
+  if (Array.isArray(d.presetsSeen)) out.presetsSeen = d.presetsSeen.filter(x => typeof x === 'string').slice(0, 100);
   return out;
 }
 function applyData(d, ts){
   const c = cleanData(d); if (!c) return false;
   Object.assign(state, c);
+  state.presetsSeen = c.presetsSeen || [];     // presets the synced data never saw get added below
   state.savedAt = ts || Date.now();
   store.set(state);
+  if (applyPresets()) setTimeout(save, 0);     // push the added preset back to the other devices
   applyTheme(); applyFinish(); renderHome(); layout(); applyFingerUI(); syncUI(); applyIosDark(false);
   return true;
 }
@@ -1231,7 +1253,11 @@ $('#importFile').onchange = async e => {
   } catch { toast('這不是 Mobile Preview 的備份檔'); }
 };
 
-$('#resetHome').onclick = () => { if (!state.clips.length){ toast('主畫面沒有加入的網站'); return; } state.clips = []; save(); renderHome(); closePops(); toast('已重設主畫面'); };
+$('#resetHome').onclick = () => {
+  state.clips = PRESET_CLIPS.map(p => ({...p}));
+  state.presetsSeen = [...new Set([...state.presetsSeen, ...PRESET_CLIPS.map(p => p.id)])];
+  save(); renderHome(); closePops(); toast('主畫面已回到預設');
+};
 
 /* home indicator: tap or swipe up */
 const hz = {y:0, down:false};
