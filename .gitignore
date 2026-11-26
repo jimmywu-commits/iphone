@@ -1,0 +1,8 @@
+# Local Claude / editor settings
+.claude/
+.vscode/
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
